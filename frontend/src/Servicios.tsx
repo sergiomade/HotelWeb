@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import Fondo from './Fondo'
 import {
   crearServicio, dinero, modificarServicio, obtenerServicios, SesionVencida, type DatosServicio, type Servicio,
 } from './api'
@@ -133,9 +134,9 @@ function Editor({ e, alCerrar, alGuardar, alError }: {
   }
 
   return (
-    <div className="fondo-panel centro" onClick={alCerrar}>
+    <Fondo centro>
       <form className="dialogo ancho" role="dialog" aria-modal="true" aria-label="Servicio"
-            onClick={(x) => x.stopPropagation()} onSubmit={enviar}>
+            onSubmit={enviar}>
         <h2>{e.nuevo ? 'Nuevo servicio' : `Servicio ${s!.id}`}</h2>
         {s?.delSistema && (
           <p className="alerta">Lo usa el sistema por su número ({s.delSistema}). Puede cambiar su precio y descripción, pero no su uso.</p>
@@ -174,6 +175,6 @@ function Editor({ e, alCerrar, alGuardar, alError }: {
           <button type="submit" disabled={!valido || guardando}>{guardando ? 'Guardando...' : 'Guardar'}</button>
         </div>
       </form>
-    </div>
+    </Fondo>
   )
 }

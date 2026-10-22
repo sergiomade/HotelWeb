@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import Fondo from './Fondo'
 import {
   dinero, fecha, FACTOR_IMPUESTOS, guardarPrecio, obtenerPrecios, SesionVencida,
   type CategoriaPrecio, type PantallaPrecios, type Precio, type TipoHabitacion,
@@ -158,9 +159,9 @@ function Editor({ e, alCerrar, alGuardar, alError }: {
   }
 
   return (
-    <div className="fondo-panel centro" onClick={alCerrar}>
+    <Fondo centro>
       <form className="dialogo" role="dialog" aria-modal="true" aria-label="Cambiar precio"
-            onClick={(x) => x.stopPropagation()} onSubmit={enviar}>
+            onSubmit={enviar}>
         <h2>{e.tipo.descripcion} · categoria {e.categoria.id}</h2>
         {e.actual && <p className="tenue">Hoy: {dinero(e.actual.conImpuestos)} ({e.actual.sinImpuestos} sin impuestos)</p>}
         <label>
@@ -181,6 +182,6 @@ function Editor({ e, alCerrar, alGuardar, alError }: {
           <button type="submit" disabled={!valido || guardando}>{guardando ? 'Guardando...' : 'Guardar'}</button>
         </div>
       </form>
-    </div>
+    </Fondo>
   )
 }

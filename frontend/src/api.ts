@@ -284,6 +284,63 @@ export const modificarServicio = (id: number, d: DatosServicio) =>
 export const crearServicio = (d: DatosServicio) =>
   pedir<Servicio>('/api/catalogos/servicios', { method: 'POST', body: JSON.stringify(d) })
 
+// ---- catalogos: clientes ----
+
+export interface ClienteResumen {
+  numero: number
+  nombre: string
+  rnc: string | null
+  telefono: string | null
+  tipoComprobante: number
+  tipoNombre: string
+  activo: boolean
+}
+
+export interface DatosCliente {
+  nombre: string
+  rnc: string | null
+  cedula: string | null
+  pasaporte: string | null
+  direccion: string | null
+  sector: string | null
+  ciudad: string | null
+  telefono: string | null
+  contacto: string | null
+  correo: string | null
+  tipoComprobante: number
+  itbis: boolean
+  propina: boolean
+  limiteCredito: number
+  condiciones: string | null
+  extranjero: boolean
+  activo: boolean
+}
+
+export interface Cliente extends DatosCliente {
+  numero: number
+  estatus: string | null
+}
+
+export interface TipoComprobante {
+  id: number
+  nombre: string
+  pideRnc: boolean
+}
+
+export interface PantallaClientes {
+  pagina: { clientes: ClienteResumen[]; total: number; mostrados: number }
+  comprobantes: TipoComprobante[]
+  puedeEditar: boolean
+}
+
+export const buscarClientes = (texto: string) =>
+  pedir<PantallaClientes>(`/api/catalogos/clientes?buscar=${encodeURIComponent(texto)}`)
+export const obtenerCliente = (numero: number) => pedir<Cliente>(`/api/catalogos/clientes/${numero}`)
+export const modificarCliente = (numero: number, d: DatosCliente) =>
+  pedir<{ cliente: Cliente; avisos: string[] }>(`/api/catalogos/clientes/${numero}`, { method: 'PUT', body: JSON.stringify(d) })
+export const crearCliente = (d: DatosCliente) =>
+  pedir<{ cliente: Cliente; avisos: string[] }>('/api/catalogos/clientes', { method: 'POST', body: JSON.stringify(d) })
+
 /** Mismo factor que la API (ITBIS 18 % + propina 10 %): solo para mostrar mientras se escribe. */
 export const FACTOR_IMPUESTOS = 1.28
 

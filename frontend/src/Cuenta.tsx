@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Fondo from './Fondo'
 import { dinero, fecha, obtenerCuenta, SesionVencida, type CuentaHabitacion, type HabitacionRack } from './api'
 
 /** Panel con la cuenta abierta de una habitacion (o sus datos, si esta libre). Solo lectura. */
@@ -25,9 +26,8 @@ export default function Cuenta({ habitacion: h, alCerrar, alVencer }: {
   }, [alCerrar])
 
   return (
-    <div className="fondo-panel" onClick={alCerrar}>
-      <aside className="panel" role="dialog" aria-modal="true" aria-label={`Habitacion ${h.numero}`}
-             onClick={(e) => e.stopPropagation()}>
+    <Fondo alCerrar={alCerrar}>
+      <aside className="panel" role="dialog" aria-modal="true" aria-label={`Habitacion ${h.numero}`}>
         <header>
           <div>
             <h2>Habitacion {h.numero}</h2>
@@ -41,7 +41,7 @@ export default function Cuenta({ habitacion: h, alCerrar, alVencer }: {
         {ocupada && !cuenta && !error && <p className="tenue">Cargando la cuenta...</p>}
         {cuenta && <Detalle c={cuenta} credito={h.credito} />}
       </aside>
-    </div>
+    </Fondo>
   )
 }
 

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import Fondo from './Fondo'
 import { crearTipo, modificarTipo, obtenerTipos, SesionVencida, type DatosTipo, type TipoHabitacion } from './api'
 
 type Edicion = { nuevo: true } | { nuevo: false; t: TipoHabitacion }
@@ -111,9 +112,9 @@ function Editor({ e, alCerrar, alGuardar, alError }: {
   const numero = (v: string) => Math.max(0, Math.min(99, Number(v.replace(/\D/g, '')) || 0))
 
   return (
-    <div className="fondo-panel centro" onClick={alCerrar}>
+    <Fondo centro>
       <form className="dialogo" role="dialog" aria-modal="true" aria-label="Tipo de habitacion"
-            onClick={(x) => x.stopPropagation()} onSubmit={enviar}>
+            onSubmit={enviar}>
         <h2>{e.nuevo ? 'Nuevo tipo de habitación' : `Tipo ${t!.id}`}</h2>
         {t && t.habitaciones > 0 && <p className="tenue">Lo usan {t.habitaciones} habitaciones.</p>}
         <label>
@@ -140,6 +141,6 @@ function Editor({ e, alCerrar, alGuardar, alError }: {
           <button type="submit" disabled={guardando || d.descripcion.trim() === ''}>{guardando ? 'Guardando...' : 'Guardar'}</button>
         </div>
       </form>
-    </div>
+    </Fondo>
   )
 }

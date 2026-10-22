@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
+import Fondo from './Fondo'
 import {
   crearHabitacion, modificarHabitacion, obtenerHabitaciones, posicionSugerida, SesionVencida,
   type DatosHabitacion, type EstadoHabitacion, type Habitacion, type PantallaHabitaciones, type TipoHabitacion,
@@ -170,9 +171,9 @@ function Editor({ e, tipos, estados, alCerrar, alGuardar, alError }: {
   const cambiar = <K extends keyof DatosHabitacion>(k: K, v: DatosHabitacion[K]) => setD((x) => ({ ...x, [k]: v }))
 
   return (
-    <div className="fondo-panel centro" onClick={alCerrar}>
+    <Fondo centro>
       <form className="dialogo ancho" role="dialog" aria-modal="true" aria-label="Habitacion"
-            onClick={(x) => x.stopPropagation()} onSubmit={enviar}>
+            onSubmit={enviar}>
         <h2>{e.nueva ? 'Nueva habitacion' : `Habitacion ${h!.numero}`}</h2>
         {h?.ocupada && <p className="tenue">Esta ocupada ahora.</p>}
 
@@ -221,6 +222,6 @@ function Editor({ e, tipos, estados, alCerrar, alGuardar, alError }: {
           <button type="submit" disabled={guardando || (e.nueva && !(n > 0))}>{guardando ? 'Guardando...' : 'Guardar'}</button>
         </div>
       </form>
-    </div>
+    </Fondo>
   )
 }

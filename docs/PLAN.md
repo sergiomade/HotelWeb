@@ -102,3 +102,14 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   Hallazgo: STP_PasarAlHotel carga los consumos de la cafeteria con el servicio 6 (EARLY CHECK IN), no con el 7.
   El usuario no quiere la columna "Ultimo cambio" en las tablas (se quito de Servicios y Habitaciones).
   85 pruebas.  - Corregido con MIG_22 (Hotel\Sql\Migracion, aplicado en Hotel_new y HotelPruebas): la cafeteria carga con el servicio 7.
+- Etapa 2: CLIENTES HECHOS y ETAPA 2 COMPLETA (2026-10-22), probada por el usuario.
+  - Clientes (`/api/catalogos/clientes`, CxcCliente, la misma de cuentas por cobrar): busqueda en el servidor (nombre,
+    RNC/cedula, numero; hasta 50), crear (numero mayor + 1 y los valores por omision de Delphi: cuenta de
+    FaParametro.CuentaCatalogo_idCliente, libro 1, "30 Dias", Activo) y modificar solo las columnas del hotel. No se
+    borran (se ponen inactivos; solo "Inactivo" es inactivo, como Delphi). RNC: con digito verificador obligatorio
+    para E31/E44/E45 (`HotelWeb.Core/Identificacion/IdentificacionRD.cs`, copia de uIdentificacionRD.pas); en E32
+    y para el correo solo avisa (hay datos viejos mal escritos). Avisa RNC repetido en otro cliente.
+  - Dialogos: los formularios donde se escribe no se cierran al tocar afuera (`frontend/src/Fondo.tsx`); se perdia el
+    trabajo al seleccionar texto y soltar el mouse fuera. El panel de consulta si, solo con clic completo en el fondo.
+  - 111 pruebas.
+- Siguiente: etapa 3, reservaciones.

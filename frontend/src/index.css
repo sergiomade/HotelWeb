@@ -261,3 +261,6 @@ label.check input { width: auto; }
 @media (max-width: 760px) { .catalogos { width: 100%; } .dialogo .dos { grid-template-columns: 1fr; } }
 
 .tabla tr.apagada td { color: var(--tenue); }
+
+.dialogo.cliente { width: min(720px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; }
+.dialogo input:disabled, .dialogo select:disabled { opacity: 0.8; }

@@ -1,17 +1,18 @@
 import { useState } from 'react'
+import Clientes from './Clientes'
 import Habitaciones from './Habitaciones'
 import Precios from './Precios'
 import Servicios from './Servicios'
 import Tipos from './Tipos'
 
-type Pestana = 'habitaciones' | 'tipos' | 'precios' | 'servicios'
+type Pestana = 'habitaciones' | 'tipos' | 'precios' | 'servicios' | 'clientes'
 
-const NOMBRES: Record<Pestana, string> = { habitaciones: 'Habitaciones', tipos: 'Tipos', precios: 'Precios', servicios: 'Servicios' }
+const NOMBRES: Record<Pestana, string> = { habitaciones: 'Habitaciones', tipos: 'Tipos', precios: 'Precios', servicios: 'Servicios', clientes: 'Clientes' }
 
 function inicial(): Pestana {
   try {
     const v = localStorage.getItem('hotelweb.catalogos')
-    if (v === 'habitaciones' || v === 'tipos' || v === 'precios' || v === 'servicios') return v
+    if (v === 'habitaciones' || v === 'tipos' || v === 'precios' || v === 'servicios' || v === 'clientes') return v
   } catch {
     // sin almacenamiento
   }
@@ -44,6 +45,7 @@ export default function Catalogos({ alVencer }: { alVencer: () => void }) {
       {p === 'tipos' && <Tipos alVencer={alVencer} />}
       {p === 'precios' && <Precios alVencer={alVencer} />}
       {p === 'servicios' && <Servicios alVencer={alVencer} />}
+      {p === 'clientes' && <Clientes alVencer={alVencer} />}
     </section>
   )
 }
