@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="HotelWeb.Api/HotelWeb.Api.csproj" />
+  <Project Path="HotelWeb.Core/HotelWeb.Core.csproj" />
+  <Project Path="HotelWeb.Tests/HotelWeb.Tests.csproj" />
+</Solution>

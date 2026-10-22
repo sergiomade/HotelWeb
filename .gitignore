@@ -1,0 +1,29 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+
+# Node / Vite
+node_modules/
+dist/
+*.local
+
+# configuracion con claves de cada instalacion
+appsettings.Production.json
+appsettings.*.local.json
+
+# editores
+.vscode/
+.idea/
+
+# datos de cada instalacion
+App_Data/
+*.db
+
+# frontend compilado (npm run build lo deja aqui)
+backend/HotelWeb.Api/wwwroot/
+
+# paquete de instalacion (deploy\preparar-paquete.ps1)
+paquete/
