@@ -30,7 +30,6 @@ export default function Inicio({ alVencer }: { alVencer: () => void }) {
         <Base titulo="Base del hotel" b={d.hotel} />
         <Base titulo="Usuarios" b={d.seguridad} />
       </ul>
-      <p className="tenue">Proximo paso: el rack de habitaciones.</p>
     </section>
   )
 }

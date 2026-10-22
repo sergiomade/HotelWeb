@@ -68,3 +68,14 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   - 21 pruebas.
 - Pendiente de la etapa 0, para mas adelante: permisos por usuario (Delphi usa `Seg_Opcion`); hoy todo usuario
   activo entra.
+- Etapa 1 (2026-10-22): HECHA y probada por el usuario (le gusto; se ajusto el tamano).
+  - `GET /api/rack`: las habitaciones con su situacion (`HotelWeb.Core/Rack/SituacionHabitacion.cs`: Ocupada =
+    cuenta abierta en HotelFactura y manda sobre el bloqueo; Llega hoy = reserva activa con FechaEntrada hoy y
+    `HotelHabitacionReservada.NoHabitacion` = la habitacion; Bloqueada = estado sin Disponible), avisos (sale hoy,
+    salida vencida, ocupada estando bloqueada), huesped, salida, personas, credito y saldo (`dbo.BalanceActualHabitacion`).
+  - `GET /api/rack/{habitacion}/cuenta`: cuenta abierta con sus lineas y el desglose (`CalculoCuenta`, mismas reglas
+    que la funcion: ITBIS 18 % salvo E44, propina 10 %, PAY-OUT y pagos sin impuestos, redondeo a pesos). Coincide
+    con la funcion en las cuentas 102, 111 y 214 de Hotel_new.
+  - Pagina: plano con la posicion x/y de Delphi (todo el ancho, 95 %, texto que crece con la pantalla), vista lista
+    por piso para celular, filtro por situacion, panel de la cuenta, se refresca cada minuto.
+  - 37 pruebas.

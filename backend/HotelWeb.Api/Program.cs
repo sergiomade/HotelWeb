@@ -6,12 +6,15 @@ using Microsoft.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+// los enum viajan como texto ("Ocupada", "Libre"...), no como numero
+builder.Services.AddControllers().AddJsonOptions(o =>
+    o.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddSingleton<Conexiones>();
 builder.Services.AddSingleton<RepositorioUsuarios>();
+builder.Services.AddSingleton<HotelWeb.Api.Rack.RepositorioRack>();
 
 // ---- sesion: token JWT; todo la pide salvo el ingreso y el ping ----
 var tokens = new Tokens(Tokens.ClaveConfigurada(builder.Configuration, builder.Environment.IsDevelopment()));
