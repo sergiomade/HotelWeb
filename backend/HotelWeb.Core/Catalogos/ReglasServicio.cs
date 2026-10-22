@@ -18,10 +18,9 @@ public static class ReglasServicio
     {
         [1] = "Hospedaje de cada noche y pagos de recibos",
         [3] = "Transferencia de habitacion",
-        // STP_PasarAlHotel carga los consumos de la cafeteria con el 6 (y no con el 7): las lineas dicen
-        // "CAFETERIA - FACTURA # n", pero al agrupar por servicio salen como early check-in
-        [6] = "Early check-in; tambien los cargos de la cafeteria a la habitacion (STP_PasarAlHotel usa el 6)",
-        [7] = "Factura de la cafeteria",
+        // hasta MIG_22 (2026-10-22) STP_PasarAlHotel cargaba la cafeteria con el 6: las lineas viejas lo tienen
+        [6] = "Early check-in (y los cargos de cafeteria anteriores a MIG_22)",
+        [7] = "Cargos de la cafeteria a la habitacion (STP_PasarAlHotel, desde MIG_22)",
         [9] = "Cargos que llegan de otra habitacion (Stp_TransferiraOcupada)",
         [11] = "Adelantos y abonos de reservas",
     };

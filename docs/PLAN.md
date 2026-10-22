@@ -101,4 +101,4 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   calcular desde un final) y si lleva ITBIS. No se borran. Marcados los que usa el sistema (1, 3, 6, 7, 9, 11).
   Hallazgo: STP_PasarAlHotel carga los consumos de la cafeteria con el servicio 6 (EARLY CHECK IN), no con el 7.
   El usuario no quiere la columna "Ultimo cambio" en las tablas (se quito de Servicios y Habitaciones).
-  85 pruebas.
+  85 pruebas.  - Corregido con MIG_22 (Hotel\Sql\Migracion, aplicado en Hotel_new y HotelPruebas): la cafeteria carga con el servicio 7.
