@@ -36,6 +36,8 @@ las mismas de `conexiones.ini` de Delphi (seccion del hotel):
 
 `Jwt:Key` ya la genero el instalador: no la cambie (si cambia, todos deben volver a entrar).
 
+`Permisos:EditanCatalogos` es la lista de usuarios (Usuario_Id de Seg_Usuario) que pueden cambiar precios y demas catalogos; los otros solo consultan. Viene con 1 y 4.
+
 Inicie el sitio y revise:
 
 ```powershell

@@ -78,4 +78,15 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
     con la funcion en las cuentas 102, 111 y 214 de Hotel_new.
   - Pagina: plano con la posicion x/y de Delphi (todo el ancho, 95 %, texto que crece con la pantalla), vista lista
     por piso para celular, filtro por situacion, panel de la cuenta, se refresca cada minuto.
-  - 37 pruebas.
+  - 37 pruebas.- Etapa 2 (en curso, 2026-10-22): PRECIOS HECHOS y probados por el usuario.
+  - Permisos: en el hotel los de Delphi no estan configurados (las pantallas piden la opcion 420 del modulo 30, que
+    no existe; los 9 usuarios estan en el grupo FINANZAS; el login marca a todos como supervisor). Decision del
+    usuario: una lista corta en appsettings `Permisos:EditanCatalogos` (Usuario_Id; hoy 1 Yudelka Brens y 4 Sergio
+    Made, los mismos que abren Sucursal en Delphi). Los demas solo consultan. No se toca la base Seguridad.
+  - `GET /api/catalogos/precios` (tabla + puedeEditar) y `PUT /api/catalogos/precios/{tipo}/{categoria}`.
+    Se escribe el precio FINAL (con ITBIS y propina) y se guarda final / 1.28 con 3 decimales en
+    HotelHabitacionTipoPrecio (`HotelWeb.Core/Catalogos/PrecioHabitacion.cs`); usuario (login cortado a 10) y fecha
+    como Delphi. Valen para los check-in nuevos (Delphi lee el precio en UFrmMntCheckIn).
+  - Pagina Precios: matriz tipo x categoria al 90 % del ancho, marca los finales con centavos (redondeo viejo).
+  - 56 pruebas.
+  - Falta del resto de la etapa 2: habitaciones, tipos, estados, servicios y clientes.

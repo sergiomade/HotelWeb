@@ -1,0 +1,51 @@
+using System.Net;
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using HotelWeb.Api.Seguridad;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+
+namespace HotelWeb.Tests;
+
+/// <summary>Permisos de edicion (Permisos:EditanCatalogos). Sin base: el permiso se revisa antes de tocarla.</summary>
+public class PermisosTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private const string Clave = "clave-de-las-pruebas-de-permisos-0123456789";
+    private readonly WebApplicationFactory<Program> _f;
+
+    public PermisosTests(WebApplicationFactory<Program> f) =>
+        _f = f.WithWebHostBuilder(b => b.UseEnvironment("Development").UseSetting("Jwt:Key", Clave));
+
+    private HttpClient Cliente(int usuarioId)
+    {
+        var c = _f.CreateClient();
+        var token = new Tokens(Clave).Crear(new Usuario(usuarioId, "prueba", "Prueba", false, false));
+        c.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return c;
+    }
+
+    [Fact]
+    public async Task Un_usuario_que_no_esta_en_la_lista_no_cambia_precios()
+    {
+        var r = await Cliente(99).PutAsJsonAsync("/api/catalogos/precios/1/A", new { conImpuestos = 3500m, personaAdicional = 0m });
+        Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+    }
+
+    [Fact]
+    public async Task Sin_sesion_tampoco()
+    {
+        var r = await _f.CreateClient().PutAsJsonAsync("/api/catalogos/precios/1/A", new { conImpuestos = 3500m, personaAdicional = 0m });
+        Assert.Equal(HttpStatusCode.Unauthorized, r.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(1, true)]
+    [InlineData(4, true)]
+    [InlineData(2, false)]
+    public void La_lista_de_appsettings(int usuario, bool edita)
+    {
+        var p = _f.Services.GetService(typeof(PermisosWeb)) as PermisosWeb;
+        Assert.NotNull(p);
+        Assert.Equal(edita, p!.EditaCatalogos(usuario));
+    }
+}

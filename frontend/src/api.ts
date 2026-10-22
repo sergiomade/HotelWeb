@@ -156,6 +156,47 @@ export interface CuentaHabitacion {
 export const obtenerRack = () => pedir<RackHoy>('/api/rack')
 export const obtenerCuenta = (habitacion: number) => pedir<CuentaHabitacion>(`/api/rack/${habitacion}/cuenta`)
 
+// ---- catalogos: precios ----
+
+export interface TipoHabitacion {
+  id: number
+  descripcion: string
+  siglas: string | null
+  minimo: number
+  maximo: number
+  habitaciones: number
+}
+
+export interface CategoriaPrecio {
+  id: string
+  descripcion: string
+}
+
+export interface Precio {
+  tipo: number
+  categoria: string
+  sinImpuestos: number
+  conImpuestos: number
+  personaAdicional: number
+  usuario: string | null
+  fecha: string | null
+}
+
+export interface PantallaPrecios {
+  tabla: { tipos: TipoHabitacion[]; categorias: CategoriaPrecio[]; precios: Precio[] }
+  puedeEditar: boolean
+}
+
+export const obtenerPrecios = () => pedir<PantallaPrecios>('/api/catalogos/precios')
+export const guardarPrecio = (tipo: number, categoria: string, conImpuestos: number, personaAdicional: number) =>
+  pedir<Precio>(`/api/catalogos/precios/${tipo}/${encodeURIComponent(categoria)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ conImpuestos, personaAdicional }),
+  })
+
+/** Mismo factor que la API (ITBIS 18 % + propina 10 %): solo para mostrar mientras se escribe. */
+export const FACTOR_IMPUESTOS = 1.28
+
 // ---- formatos ----
 
 const pesos = new Intl.NumberFormat('es-DO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })

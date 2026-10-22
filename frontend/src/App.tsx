@@ -2,9 +2,10 @@ import { useCallback, useState } from 'react'
 import { salir, sesionGuardada, type Sesion } from './api'
 import Ingreso from './Ingreso'
 import Inicio from './Inicio'
+import Precios from './Precios'
 import Rack from './Rack'
 
-type Pagina = 'rack' | 'inicio'
+type Pagina = 'rack' | 'precios' | 'inicio'
 
 export default function App() {
   const [sesion, setSesion] = useState<Sesion | null>(() => sesionGuardada())
@@ -22,6 +23,7 @@ export default function App() {
         <span className="marca"><img src="/hotel.svg" alt="" width={24} height={24} /> Hotel</span>
         <nav className="menu">
           <button type="button" className={pagina === 'rack' ? 'activo' : ''} onClick={() => setPagina('rack')}>Habitaciones</button>
+          <button type="button" className={pagina === 'precios' ? 'activo' : ''} onClick={() => setPagina('precios')}>Precios</button>
           <button type="button" className={pagina === 'inicio' ? 'activo' : ''} onClick={() => setPagina('inicio')}>Sistema</button>
         </nav>
         <span className="usuario">
@@ -29,9 +31,11 @@ export default function App() {
           <button type="button" className="secundario" onClick={cerrar}>Salir</button>
         </span>
       </header>
-      {/* el rack usa todo el ancho de la pantalla; las demas paginas, una columna legible */}
-      <main className={pagina === 'rack' ? 'contenido ancho' : 'contenido'}>
-        {pagina === 'rack' ? <Rack alVencer={cerrar} /> : <Inicio alVencer={cerrar} />}
+      {/* rack y precios usan todo el ancho de la pantalla; Sistema, una columna legible */}
+      <main className={pagina === 'inicio' ? 'contenido' : 'contenido ancho'}>
+        {pagina === 'rack' && <Rack alVencer={cerrar} />}
+        {pagina === 'precios' && <Precios alVencer={cerrar} />}
+        {pagina === 'inicio' && <Inicio alVencer={cerrar} />}
       </main>
     </div>
   )

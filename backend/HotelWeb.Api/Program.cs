@@ -15,6 +15,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<Conexiones>();
 builder.Services.AddSingleton<RepositorioUsuarios>();
 builder.Services.AddSingleton<HotelWeb.Api.Rack.RepositorioRack>();
+builder.Services.AddSingleton<HotelWeb.Api.Catalogos.RepositorioPrecios>();
+builder.Services.AddSingleton<PermisosWeb>();
 
 // ---- sesion: token JWT; todo la pide salvo el ingreso y el ping ----
 var tokens = new Tokens(Tokens.ClaveConfigurada(builder.Configuration, builder.Environment.IsDevelopment()));
