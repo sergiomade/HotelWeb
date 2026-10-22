@@ -341,6 +341,135 @@ export const modificarCliente = (numero: number, d: DatosCliente) =>
 export const crearCliente = (d: DatosCliente) =>
   pedir<{ cliente: Cliente; avisos: string[] }>('/api/catalogos/clientes', { method: 'POST', body: JSON.stringify(d) })
 
+// ---- reservas ----
+
+export interface ReservaResumen {
+  id: number
+  cliente: string
+  huesped: string | null
+  entrada: string
+  salida: string
+  noches: number
+  estado: number
+  estadoNombre: string
+  habitaciones: string | null
+  cantidadHabitaciones: number
+  adelantos: number
+  telefono: string | null
+}
+
+export interface LineaReserva {
+  tipo: number
+  cantidad: number
+  adultos: number
+  ninos: number
+  bebes: number
+  credito: boolean
+  categoria: string
+  tarifa: number
+}
+
+export interface LineaVista extends LineaReserva {
+  secuencia: number
+  tipoNombre: string
+  importe: number
+  noHabitacion: number | null
+}
+
+export interface Adelanto {
+  id: number
+  fecha: string
+  monto: number
+  montoUs: number | null
+  formaPago: number
+  formaPagoNombre: string
+  estatus: string
+  usuario: string | null
+}
+
+export interface DatosReserva {
+  nombreCliente: string
+  clienteId: number | null
+  contacto: string | null
+  telefono: string | null
+  huesped: string | null
+  cedula: string | null
+  pasaporte: string | null
+  rnc: string | null
+  entrada: string
+  salida: string
+  comentario: string | null
+  formaPago: number
+  categoria: string | null
+  lineas: LineaReserva[]
+}
+
+export interface Reserva extends Omit<DatosReserva, 'lineas' | 'nombreCliente'> {
+  id: number
+  cliente: string
+  noches: number
+  personas: number
+  estado: number
+  estadoNombre: string
+  usuario: string | null
+  creada: string | null
+  lineas: LineaVista[]
+  adelantos: Adelanto[]
+  total: number
+  totalAdelantos: number
+}
+
+export interface Disponibilidad {
+  tipo: number
+  descripcion: string
+  habitaciones: number
+  ocupadas: number
+  reservadas: number
+  libres: number
+}
+
+export interface Opcion { id: number; nombre: string }
+
+export interface OpcionesReserva {
+  formasPago: Opcion[]
+  formasPagoAdelanto: Opcion[]
+  anulaAdelantos: boolean
+}
+
+/** Error que pide confirmacion (la API respondio 409). */
+export class PideConfirmar extends Error {}
+
+export const buscarReservas = (desde: string, hasta: string, porSalida: boolean, texto: string, estado: number) =>
+  pedir<ReservaResumen[]>(`/api/reservas?desde=${desde}&hasta=${hasta}&porSalida=${porSalida}` +
+    `&buscar=${encodeURIComponent(texto)}${estado ? `&estado=${estado}` : ''}`)
+export const opcionesReserva = () => pedir<OpcionesReserva>('/api/reservas/opciones')
+export const obtenerReserva = (id: number) => pedir<Reserva>(`/api/reservas/${id}`)
+export const disponibilidad = (entrada: string, salida: string, excluir?: number) =>
+  pedir<Disponibilidad[]>(`/api/reservas/disponibilidad?entrada=${entrada}&salida=${salida}${excluir ? `&excluir=${excluir}` : ''}`)
+export const crearReserva = (d: DatosReserva) =>
+  pedir<{ reserva: Reserva; avisos: string[] }>('/api/reservas', { method: 'POST', body: JSON.stringify(d) })
+export const modificarReserva = (id: number, d: DatosReserva) =>
+  pedir<{ reserva: Reserva; avisos: string[] }>(`/api/reservas/${id}`, { method: 'PUT', body: JSON.stringify(d) })
+export async function cancelarReserva(id: number, aunConAdelantos: boolean): Promise<Reserva> {
+  try {
+    return await pedir<Reserva>(`/api/reservas/${id}/cancelar?aunConAdelantos=${aunConAdelantos}`, { method: 'POST' })
+  } catch (e) {
+    if (e instanceof Error && e.message.includes('confirme')) throw new PideConfirmar(e.message)
+    throw e
+  }
+}
+export const registrarAdelanto = (id: number, monto: number, formaPago: number, montoUs: number | null) =>
+  pedir<Reserva>(`/api/reservas/${id}/adelantos`, { method: 'POST', body: JSON.stringify({ monto, formaPago, montoUs }) })
+export const anularAdelanto = (id: number, adelanto: number) =>
+  pedir<Reserva>(`/api/reservas/${id}/adelantos/${adelanto}/anular`, { method: 'POST' })
+
+/** Fecha de hoy (o +dias) como aaaa-mm-dd, en la hora local. */
+export function hoyIso(dias = 0): string {
+  const d = new Date()
+  d.setDate(d.getDate() + dias)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 /** Mismo factor que la API (ITBIS 18 % + propina 10 %): solo para mostrar mientras se escribe. */
 export const FACTOR_IMPUESTOS = 1.28
 

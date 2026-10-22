@@ -264,3 +264,32 @@ label.check input { width: auto; }
 
 .dialogo.cliente { width: min(720px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; }
 .dialogo input:disabled, .dialogo select:disabled { opacity: 0.8; }
+
+/* ---- reservas ---- */
+.reservas { width: 90%; margin: 0 auto; }
+.filtros label.corto { flex: 0 1 180px; }
+.filtros label.largo { flex: 1 1 260px; }
+.filtros label input, .filtros label select { width: 100%; }
+.estado { display: inline-block; padding: 0.1em 0.6em; border-radius: 999px; font-size: 0.85em; border: 1px solid var(--borde); }
+.estado.e1 { background: var(--llega-fondo); border-color: var(--llega-borde); }
+.estado.e2 { background: var(--bloq-fondo); border-color: var(--bloq-borde); color: var(--tenue); }
+.estado.e3 { background: var(--ocupada-fondo); border-color: var(--ocupada-borde); }
+.dialogo.reserva { width: min(1150px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; }
+fieldset.grupo { border: 1px solid var(--borde); border-radius: 8px; padding: 10px 14px 14px; margin: 0; display: grid; gap: 10px; min-width: 0; }
+fieldset.grupo legend { padding: 0 6px; font-weight: 600; }
+fieldset.grupo:disabled { opacity: 0.85; }
+.tres { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.cuatro { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.cuatro.alineado { align-items: end; }
+.tabla.lineas td { padding: 4px; }
+.tabla.lineas select { width: auto; min-width: 110px; }
+input.numero { width: 4.5em; text-align: right; }
+input.numero.ancho { width: 7.5em; }
+button.peligro { background: var(--mal); color: #fff; }
+.botones .espacio { flex: 1; }
+.buscador { position: relative; }
+.sugerencias { position: absolute; z-index: 5; left: 0; right: 0; top: 100%; margin: 2px 0 0; padding: 4px; list-style: none;
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: 8px; box-shadow: 0 6px 18px rgb(0 0 0 / 0.15); }
+.sugerencias button { width: 100%; text-align: left; background: transparent; color: var(--texto); padding: 6px 8px; }
+.sugerencias button:hover { background: var(--fondo); }
+@media (max-width: 760px) { .reservas { width: 100%; } .tres, .cuatro { grid-template-columns: 1fr; } }

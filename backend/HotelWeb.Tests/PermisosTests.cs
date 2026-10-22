@@ -68,6 +68,21 @@ public class PermisosTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task Ni_anular_adelantos()
+    {
+        var r = await Cliente(99).PostAsync("/api/reservas/7324/adelantos/10773/anular", null);
+        Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+    }
+
+    [Fact]
+    public void Anular_adelantos_usa_la_lista_de_catalogos_si_no_tiene_la_suya()
+    {
+        var p = (PermisosWeb)_f.Services.GetService(typeof(PermisosWeb))!;
+        Assert.True(p.AnulaAdelantos(4));
+        Assert.False(p.AnulaAdelantos(2));
+    }
+
+    [Fact]
     public async Task Sin_sesion_tampoco()
     {
         var r = await _f.CreateClient().PutAsJsonAsync("/api/catalogos/precios/1/A", new { conImpuestos = 3500m, personaAdicional = 0m });

@@ -125,4 +125,9 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
     adelantos ACTIVOS (hoy usan "Select Monto ... Where Reserva_id" que espera uno solo: con 2 o mas el check-in
     falla, y no miran el Estatus). Hay 6 reservas viejas con varios (3132 tiene 4). Stp_ImprimirFacturaFiscal ya suma.
   - Anular un adelanto: si, antes del check-in, usuario con permiso; Estatus 'Anulada' (no se borra).
-- Pendiente: MIG_23 (probar en transaccion revertida, aplicar en Hotel_new y HotelPruebas), luego API y pantallas.
+- Pendiente: MIG_23 (probar en transaccion revertida, aplicar en Hotel_new y HotelPruebas), luego API y pantallas.- Etapa 3 en curso (2026-10-22): MIG_23 HECHO y aplicado (Hotel_new y HotelPruebas). API `/api/reservas` HECHA y
+  probada contra Hotel_new (buscar por entrada/salida, ver, crear, modificar solo activas, cancelar con 409 si hay
+  adelantos activos, disponibilidad por tipo, registrar adelanto, anular adelanto con Permisos:AnulanAdelantos).
+  Pantallas Reservas y editor (cliente con busqueda, lineas por tipo con tarifa de la tabla de precios, libres por
+  tipo, adelantos) HECHAS y probadas por el usuario. 126 pruebas.
+  - Falta de la etapa 3: confirmacion impresa (decidido: despues).
