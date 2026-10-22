@@ -89,4 +89,11 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
     como Delphi. Valen para los check-in nuevos (Delphi lee el precio en UFrmMntCheckIn).
   - Pagina Precios: matriz tipo x categoria al 90 % del ancho, marca los finales con centavos (redondeo viejo).
   - 56 pruebas.
-  - Falta del resto de la etapa 2: habitaciones, tipos, estados, servicios y clientes.
+  - Falta del resto de la etapa 2: habitaciones, tipos, estados, servicios y clientes.- Etapa 2: HABITACIONES y TIPOS HECHOS (2026-10-22), probados por el usuario.
+  - Menu: Rack | Catalogos (pestanas Habitaciones, Tipos, Precios) | Sistema. Catalogos al 90 % del ancho.
+  - Habitaciones (`/api/catalogos/habitaciones`): crear y modificar tipo, estado, comentario, extension, TV, aire y
+    "sabanas" (la columna hotelHabitacion.cabana significa sabanas, lo aclaro el usuario). No se borran (estado
+    "No usar"). Una nueva va en la siguiente casilla libre de la fila de su piso (`ReglasHabitacion.PosicionSugerida`).
+  - Tipos (`/api/catalogos/tipos`): crear (numero = mayor + 1, como Delphi) y modificar nombre (en mayusculas, sin
+    repetir), siglas y personas. No se borran.
+  - 75 pruebas.

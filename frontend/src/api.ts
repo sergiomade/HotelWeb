@@ -194,6 +194,68 @@ export const guardarPrecio = (tipo: number, categoria: string, conImpuestos: num
     body: JSON.stringify({ conImpuestos, personaAdicional }),
   })
 
+// ---- catalogos: habitaciones ----
+
+export interface Habitacion {
+  numero: number
+  tipo: number
+  estado: number
+  comentario: string | null
+  extension: string | null
+  television: boolean
+  aireAcondicionado: boolean
+  cabana: boolean
+  x: number
+  y: number
+  ocupada: boolean
+  usuario: string | null
+  fecha: string | null
+}
+
+export interface EstadoHabitacion {
+  id: number
+  descripcion: string
+  disponible: boolean
+}
+
+export interface PantallaHabitaciones {
+  catalogo: { habitaciones: Habitacion[]; tipos: TipoHabitacion[]; estados: EstadoHabitacion[] }
+  puedeEditar: boolean
+}
+
+export interface DatosHabitacion {
+  tipo: number
+  estado: number
+  comentario: string | null
+  extension: string | null
+  television: boolean
+  aireAcondicionado: boolean
+  cabana: boolean
+}
+
+export const obtenerHabitaciones = () => pedir<PantallaHabitaciones>('/api/catalogos/habitaciones')
+export const modificarHabitacion = (numero: number, d: DatosHabitacion) =>
+  pedir<Habitacion>(`/api/catalogos/habitaciones/${numero}`, { method: 'PUT', body: JSON.stringify(d) })
+export const crearHabitacion = (numero: number, x: number | null, y: number | null, d: DatosHabitacion) =>
+  pedir<Habitacion>('/api/catalogos/habitaciones', { method: 'POST', body: JSON.stringify({ numero, x, y, ...d }) })
+export const posicionSugerida = (numero: number) =>
+  pedir<{ x: number; y: number }>(`/api/catalogos/habitaciones/posicion/${numero}`)
+
+// ---- catalogos: tipos de habitacion ----
+
+export interface DatosTipo {
+  descripcion: string
+  siglas: string | null
+  minimo: number
+  maximo: number
+}
+
+export const obtenerTipos = () => pedir<{ tipos: TipoHabitacion[]; puedeEditar: boolean }>('/api/catalogos/tipos')
+export const modificarTipo = (id: number, d: DatosTipo) =>
+  pedir<TipoHabitacion>(`/api/catalogos/tipos/${id}`, { method: 'PUT', body: JSON.stringify(d) })
+export const crearTipo = (d: DatosTipo) =>
+  pedir<TipoHabitacion>('/api/catalogos/tipos', { method: 'POST', body: JSON.stringify(d) })
+
 /** Mismo factor que la API (ITBIS 18 % + propina 10 %): solo para mostrar mientras se escribe. */
 export const FACTOR_IMPUESTOS = 1.28
 
