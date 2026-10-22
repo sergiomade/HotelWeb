@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react
 import Fondo from './Fondo'
 import {
   anularAdelanto, buscarClientes, cancelarReserva, crearReserva, dinero, disponibilidad, fecha, FACTOR_IMPUESTOS, hoyIso,
-  modificarReserva, obtenerPrecios, obtenerReserva, opcionesReserva, PideConfirmar, registrarAdelanto, SesionVencida,
+  modificarReserva, obtenerCliente, obtenerPrecios, obtenerReserva, opcionesReserva, PideConfirmar, registrarAdelanto, SesionVencida,
   type ClienteResumen, type DatosReserva, type Disponibilidad, type LineaReserva, type OpcionesReserva, type PantallaPrecios,
   type Reserva,
 } from './api'
@@ -25,6 +25,7 @@ export default function ReservaEditor({ id, alCerrar, alVencer }: {
   const [libres, setLibres] = useState<Disponibilidad[]>([])
   const [error, setError] = useState('')
   const [avisos, setAvisos] = useState<string[]>([])
+  const [sugeridos, setSugeridos] = useState('')
   const [guardando, setGuardando] = useState(false)
 
   const manejar = useCallback((e: unknown) => {
@@ -128,6 +129,35 @@ export default function ReservaEditor({ id, alCerrar, alVencer }: {
     }
   }
 
+  /**
+   * Al elegir un cliente de la lista se sugieren sus datos (telefono, contacto, cedula, pasaporte y RNC) en los
+   * campos que esten vacios; lo ya escrito no se toca y todo se puede cambiar.
+   */
+  async function elegirCliente(c: ClienteResumen) {
+    setD((x) => ({ ...x, nombreCliente: c.nombre, clienteId: c.numero }))
+    try {
+      const f = await obtenerCliente(c.numero)
+      type Campo = 'telefono' | 'contacto' | 'cedula' | 'pasaporte' | 'rnc'
+      const delCliente: [Campo, string | null, string][] = [
+        ['telefono', f.telefono, 'teléfono'],
+        ['contacto', f.contacto, 'contacto'],
+        ['cedula', f.cedula && /[1-9]/.test(f.cedula) ? f.cedula : null, 'cédula'],   // once ceros = sin cedula
+        ['pasaporte', f.pasaporte && f.pasaporte.trim() !== '0' ? f.pasaporte : null, 'pasaporte'],
+        ['rnc', f.rnc, 'RNC'],
+      ]
+      // solo lo que el cliente tiene y en el formulario esta vacio
+      const sugerir = delCliente.filter(([k, v]) => v && v.trim() && !(d[k] ?? '').trim())
+      setD((x) => {
+        const n = { ...x }
+        for (const [k, v] of sugerir) if (!(n[k] ?? '').trim()) n[k] = v!.trim()
+        return n
+      })
+      setSugeridos(sugerir.length ? `Tomado del cliente: ${sugerir.map((s) => s[2]).join(', ')}. Puede cambiarlos.` : '')
+    } catch (e) {
+      manejar(e)
+    }
+  }
+
   const cambiar = <K extends keyof DatosReserva>(k: K, v: DatosReserva[K]) => setD((x) => ({ ...x, [k]: v }))
   const cargando = (id && !reserva) || !precios || !opciones
 
@@ -145,8 +175,9 @@ export default function ReservaEditor({ id, alCerrar, alVencer }: {
           <>
             <fieldset disabled={!editable} className="grupo">
               <legend>Cliente y huésped</legend>
-              <BuscadorCliente nombre={d.nombreCliente} alElegir={(c) => setD((x) => ({ ...x, nombreCliente: c.nombre, clienteId: c.numero, rnc: c.rnc ?? x.rnc, telefono: x.telefono || c.telefono }))}
-                               alEscribir={(n) => setD((x) => ({ ...x, nombreCliente: n, clienteId: null }))} alError={manejar} />
+              <BuscadorCliente nombre={d.nombreCliente} alElegir={elegirCliente}
+                               alEscribir={(n) => { setD((x) => ({ ...x, nombreCliente: n, clienteId: null })); setSugeridos('') }} alError={manejar} />
+              {sugeridos && <p className="tenue">{sugeridos}</p>}
               <div className="tres">
                 <label>Huésped<input maxLength={60} value={d.huesped ?? ''} onChange={(x) => cambiar('huesped', x.target.value)} /></label>
                 <label>Contacto<input maxLength={60} value={d.contacto ?? ''} onChange={(x) => cambiar('contacto', x.target.value)} /></label>
