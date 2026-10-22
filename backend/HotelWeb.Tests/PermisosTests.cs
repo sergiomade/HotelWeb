@@ -50,6 +50,15 @@ public class PermisosTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task Ni_servicios()
+    {
+        var c = Cliente(99);
+        var datos = new { descripcion = "MINIBAR", precio = 100m, impuesto = true };
+        Assert.Equal(HttpStatusCode.Forbidden, (await c.PutAsJsonAsync("/api/catalogos/servicios/5", datos)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await c.PostAsJsonAsync("/api/catalogos/servicios", datos)).StatusCode);
+    }
+
+    [Fact]
     public async Task Sin_sesion_tampoco()
     {
         var r = await _f.CreateClient().PutAsJsonAsync("/api/catalogos/precios/1/A", new { conImpuestos = 3500m, personaAdicional = 0m });

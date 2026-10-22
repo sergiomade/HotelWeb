@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import {
-  crearHabitacion, fecha, modificarHabitacion, obtenerHabitaciones, posicionSugerida, SesionVencida,
+  crearHabitacion, modificarHabitacion, obtenerHabitaciones, posicionSugerida, SesionVencida,
   type DatosHabitacion, type EstadoHabitacion, type Habitacion, type PantallaHabitaciones, type TipoHabitacion,
 } from './api'
 
@@ -75,7 +75,7 @@ export default function Habitaciones({ alVencer }: { alVencer: () => void }) {
           <thead>
             <tr>
               <th className="num">No.</th><th>Tipo</th><th>Estado</th><th>Comentario</th><th>Ext.</th>
-              <th>TV</th><th>Aire</th><th>Sábanas</th><th>Ahora</th><th>Ultimo cambio</th>
+              <th>TV</th><th>Aire</th><th>Sábanas</th><th>Ahora</th>
             </tr>
           </thead>
           <tbody>
@@ -95,11 +95,10 @@ export default function Habitaciones({ alVencer }: { alVencer: () => void }) {
                   <td>{h.aireAcondicionado ? 'Si' : ''}</td>
                   <td>{h.cabana ? 'Si' : ''}</td>
                   <td>{h.ocupada ? 'Ocupada' : ''}</td>
-                  <td className="tenue">{h.usuario} {fecha(h.fecha, true)}</td>
                 </tr>
               )
             })}
-            {lista.length === 0 && <tr><td colSpan={10} className="tenue">Ninguna habitacion con ese filtro.</td></tr>}
+            {lista.length === 0 && <tr><td colSpan={9} className="tenue">Ninguna habitacion con ese filtro.</td></tr>}
           </tbody>
         </table>
       </div>

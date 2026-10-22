@@ -256,6 +256,34 @@ export const modificarTipo = (id: number, d: DatosTipo) =>
 export const crearTipo = (d: DatosTipo) =>
   pedir<TipoHabitacion>('/api/catalogos/tipos', { method: 'POST', body: JSON.stringify(d) })
 
+// ---- catalogos: servicios ----
+
+export interface Servicio {
+  id: number
+  descripcion: string
+  precio: number
+  conItbis: number
+  conItbisYPropina: number
+  impuesto: boolean
+  cuenta: number
+  delSistema: string | null
+  usos: number
+  usuario: string | null
+  fecha: string | null
+}
+
+export interface DatosServicio {
+  descripcion: string
+  precio: number
+  impuesto: boolean
+}
+
+export const obtenerServicios = () => pedir<{ servicios: Servicio[]; puedeEditar: boolean }>('/api/catalogos/servicios')
+export const modificarServicio = (id: number, d: DatosServicio) =>
+  pedir<Servicio>(`/api/catalogos/servicios/${id}`, { method: 'PUT', body: JSON.stringify(d) })
+export const crearServicio = (d: DatosServicio) =>
+  pedir<Servicio>('/api/catalogos/servicios', { method: 'POST', body: JSON.stringify(d) })
+
 /** Mismo factor que la API (ITBIS 18 % + propina 10 %): solo para mostrar mientras se escribe. */
 export const FACTOR_IMPUESTOS = 1.28
 
