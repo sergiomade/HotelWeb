@@ -113,3 +113,16 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
     trabajo al seleccionar texto y soltar el mouse fuera. El panel de consulta si, solo con clic completo en el fondo.
   - 111 pruebas.
 - Siguiente: etapa 3, reservaciones.
+## Etapa 3 (reservaciones): decisiones del usuario (2026-10-22), sin empezar a programar
+- Reserva por TIPO como Delphi (HotelHabitacionReservada: Habitacion_id = tipo, NoHabitacion = 0; la habitacion se
+  asigna en el check-in con STP_CrearHabitacionesReserva). Anular = EstatusReservacion_id 2 (no se borra).
+- Sobreventa: avisar cuantas quedan libres del tipo en esas fechas, pero dejar guardar.
+- Confirmacion impresa: despues.
+- ADELANTOS: se registran ya desde la web (HotelReservaAdelanto: identidad, Fecha, Reserva_id, Cliente_id, Monto,
+  Montous, Monedas_id = forma de pago de ConMonedas: 1 efectivo, 2 dolares, 3 cheque, 4 tarjeta, 8 deposito...,
+  Usuario, Estatus 'Activa', Posteado).
+  - VARIOS por reserva: hacer MIG_23 para que STP_CheckInHabitaciones y STP_CrearHabitacionesReserva sumen los
+    adelantos ACTIVOS (hoy usan "Select Monto ... Where Reserva_id" que espera uno solo: con 2 o mas el check-in
+    falla, y no miran el Estatus). Hay 6 reservas viejas con varios (3132 tiene 4). Stp_ImprimirFacturaFiscal ya suma.
+  - Anular un adelanto: si, antes del check-in, usuario con permiso; Estatus 'Anulada' (no se borra).
+- Pendiente: MIG_23 (probar en transaccion revertida, aplicar en Hotel_new y HotelPruebas), luego API y pantallas.
