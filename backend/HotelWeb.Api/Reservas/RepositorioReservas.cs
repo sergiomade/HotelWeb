@@ -65,12 +65,13 @@ public sealed class RepositorioReservas
 
     /// <summary>
     /// Reservas por fecha de entrada (o de salida: la proyeccion de Delphi) entre dos fechas, texto (cliente, huesped
-    /// o numero) y estado. Hasta 300.
+    /// o numero) y estado. Hasta 300. porAlta: por el dia en que se hizo la reserva (el tablero: "reservas de hoy").
     /// </summary>
-    public IReadOnlyList<ReservaResumen> Buscar(DateTime desde, DateTime hasta, bool porSalida, string? texto, int? estado)
+    public IReadOnlyList<ReservaResumen> Buscar(DateTime desde, DateTime hasta, bool porSalida, string? texto, int? estado,
+        bool porAlta = false)
     {
         texto = (texto ?? "").Trim();
-        var campo = porSalida ? "r.FechaSalida" : "r.FechaEntrada";
+        var campo = porAlta ? "r.fechaadicion" : porSalida ? "r.FechaSalida" : "r.FechaEntrada";
         var filtro = $"{campo} >= @desde AND {campo} < @hastaMas1";
         if (estado is > 0) filtro += " AND r.EstatusReservacion_id = @estado";
         if (texto.Length > 0)

@@ -62,7 +62,7 @@ export default function CheckIn({ alVencer }: { alVencer: () => void }) {
   )
 }
 
-function Asignar({ reserva, alCerrar, alVencer }: {
+export function Asignar({ reserva, alCerrar, alVencer }: {
   reserva: number
   alCerrar: (r?: { texto: string; avisos: string[] }) => void
   alVencer: () => void

@@ -453,6 +453,9 @@ export class PideConfirmar extends Error {}
 export const buscarReservas = (desde: string, hasta: string, porSalida: boolean, texto: string, estado: number) =>
   pedir<ReservaResumen[]>(`/api/reservas?desde=${desde}&hasta=${hasta}&porSalida=${porSalida}` +
     `&buscar=${encodeURIComponent(texto)}${estado ? `&estado=${estado}` : ''}`)
+/** Las reservas que se hicieron ese dia (el tablero). */
+export const reservasHechas = (dia: string) =>
+  pedir<ReservaResumen[]>(`/api/reservas?desde=${dia}&hasta=${dia}&porAlta=true`)
 export const opcionesReserva = () => pedir<OpcionesReserva>('/api/reservas/opciones')
 export const obtenerReserva = (id: number) => pedir<Reserva>(`/api/reservas/${id}`)
 export interface ReservaImpresa {

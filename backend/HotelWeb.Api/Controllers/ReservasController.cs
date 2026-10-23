@@ -44,13 +44,13 @@ public sealed class ReservasController : ControllerBase
     /// <summary>Por fecha de entrada (o de salida, como la proyeccion de Delphi), texto y estado.</summary>
     [HttpGet]
     public ActionResult<IReadOnlyList<ReservaResumen>> Buscar([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta,
-        [FromQuery] bool porSalida, [FromQuery] string? buscar, [FromQuery] int? estado)
+        [FromQuery] bool porSalida, [FromQuery] string? buscar, [FromQuery] int? estado, [FromQuery] bool porAlta)
     {
         var d = desde ?? DateTime.Today;
         var h = hasta ?? d.AddDays(30);
         if (h < d) return BadRequest("La fecha final es antes de la inicial.");
         if ((h - d).TotalDays > 400) return BadRequest("Elija un rango de hasta 400 dias.");
-        return Ok(_reservas.Buscar(d, h, porSalida, buscar, estado));
+        return Ok(_reservas.Buscar(d, h, porSalida, buscar, estado, porAlta));
     }
 
     [HttpGet("opciones")]

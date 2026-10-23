@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { avisosSecuencias, obtenerEmpresa, salir, sesionGuardada, type SecuenciaEcf, type Sesion } from './api'
 import Ingreso from './Ingreso'
-import Inicio from './Inicio'
+import Tablero from './Tablero'
 import Catalogos from './Catalogos'
 import Rack from './Rack'
 import Recepcion from './Recepcion'
@@ -25,7 +25,8 @@ const FOTOS: Partial<Record<Pagina, { src: string; alt: string; pos: string }>> 
 
 export default function App() {
   const [sesion, setSesion] = useState<Sesion | null>(() => sesionGuardada())
-  const [pagina, setPagina] = useState<Pagina>('rack')
+  // se entra al tablero del dia (decision del usuario 2026-10-23)
+  const [pagina, setPagina] = useState<Pagina>('inicio')
   const [empresa, setEmpresa] = useState('')
   const [avisos, setAvisos] = useState<SecuenciaEcf[]>([])
   const [vistaCatalogos, setVistaCatalogos] = useState(0)
@@ -88,7 +89,7 @@ export default function App() {
           <button type="button" className={pagina === 'compras' ? 'activo' : ''} onClick={() => setPagina('compras')}>Compras</button>
           <button type="button" className={pagina === 'reportes' ? 'activo' : ''} onClick={() => setPagina('reportes')}>Reportes</button>
           <button type="button" className={pagina === 'catalogos' ? 'activo' : ''} onClick={() => setPagina('catalogos')}>Catalogos</button>
-          <button type="button" className={pagina === 'inicio' ? 'activo' : ''} onClick={() => setPagina('inicio')}>Sistema</button>
+          <button type="button" className={pagina === 'inicio' ? 'activo' : ''} onClick={() => setPagina('inicio')}>Tablero</button>
         </nav>
         <span className="usuario">
           {sesion.usuario.nombre}
@@ -106,8 +107,7 @@ export default function App() {
           </span>
         </div>
       )}
-      {/* rack y catalogos usan todo el ancho de la pantalla; Sistema, una columna legible */}
-      <main className={pagina === 'inicio' ? 'contenido' : 'contenido ancho'}>
+      <main className="contenido ancho">
         {FOTOS[pagina] && <div className="franja-seccion no-imprimir" style={{ backgroundImage: `url('${FOTOS[pagina]!.src}')`, backgroundPosition: FOTOS[pagina]!.pos }}
                                role="img" aria-label={FOTOS[pagina]!.alt} />}
         {pagina === 'rack' && <Rack alVencer={cerrar} />}
@@ -118,7 +118,7 @@ export default function App() {
         {pagina === 'reportes' && <Reportes alVencer={cerrar} />}
         {pagina === 'reservas' && <Reservas alVencer={cerrar} />}
         {pagina === 'catalogos' && <Catalogos key={vistaCatalogos} alVencer={cerrar} />}
-        {pagina === 'inicio' && <Inicio alVencer={cerrar} />}
+        {pagina === 'inicio' && <Tablero alVencer={cerrar} />}
       </main>
     </div>
   )
