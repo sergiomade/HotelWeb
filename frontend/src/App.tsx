@@ -13,6 +13,16 @@ import Compras from './Compras'
 
 type Pagina = 'rack' | 'recepcion' | 'walkin' | 'cafeteria' | 'compras' | 'reportes' | 'reservas' | 'catalogos' | 'inicio'
 
+// fotos del hotel (carpeta Images) como franja arriba de las paginas de atencion; las de trabajo (compras, reportes,
+// catalogos, sistema) van sin foto. pos = que parte de la foto se ve en la franja
+const FOTOS: Partial<Record<Pagina, { src: string; alt: string; pos: string }>> = {
+  rack: { src: '/seccion-hospedaje.jpg', alt: 'Una habitación del hotel', pos: 'center 62%' },
+  reservas: { src: '/fondo-ingreso.jpg', alt: 'La entrada del Hotel Las Caobas', pos: 'center 45%' },
+  recepcion: { src: '/seccion-recepcion.jpg', alt: 'El lobby y la recepción del hotel', pos: 'center 55%' },
+  walkin: { src: '/seccion-walkin.jpg', alt: 'La piscina del hotel', pos: 'center 60%' },
+  cafeteria: { src: '/seccion-cafeteria.jpg', alt: 'La cafetería del hotel', pos: 'center 60%' },
+}
+
 export default function App() {
   const [sesion, setSesion] = useState<Sesion | null>(() => sesionGuardada())
   const [pagina, setPagina] = useState<Pagina>('rack')
@@ -98,6 +108,8 @@ export default function App() {
       )}
       {/* rack y catalogos usan todo el ancho de la pantalla; Sistema, una columna legible */}
       <main className={pagina === 'inicio' ? 'contenido' : 'contenido ancho'}>
+        {FOTOS[pagina] && <div className="franja-seccion no-imprimir" style={{ backgroundImage: `url('${FOTOS[pagina]!.src}')`, backgroundPosition: FOTOS[pagina]!.pos }}
+                               role="img" aria-label={FOTOS[pagina]!.alt} />}
         {pagina === 'rack' && <Rack alVencer={cerrar} />}
         {pagina === 'recepcion' && <Recepcion alVencer={cerrar} />}
         {pagina === 'walkin' && <WalkIn alVencer={cerrar} />}

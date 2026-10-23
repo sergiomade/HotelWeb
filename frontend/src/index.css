@@ -525,3 +525,17 @@ button.chico { padding: 0.15em 0.6em; font-size: 0.85em; }
 .aviso-secuencias .botones { display: flex; gap: 6px; margin: 0; }
 
 .ticket-firma { margin-top: 22px !important; }
+
+/* fondo del ingreso: la fachada del hotel (Images/23006354.jpg), oscurecida para que la tarjeta se lea bien */
+.ingreso {
+  background: linear-gradient(rgba(10, 20, 30, 0.35), rgba(10, 20, 30, 0.55)), url('/fondo-ingreso.jpg') center / cover no-repeat;
+}
+.ingreso .tarjeta { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+
+/* franja con la foto de la seccion (App.tsx, FOTOS) */
+.franja-seccion {
+  height: 84px; margin: 0 0 14px; border-radius: 10px; background-size: cover; background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+@media (max-width: 700px) { .franja-seccion { height: 56px; margin-bottom: 10px; } }
+@media (prefers-color-scheme: dark) { .franja-seccion { filter: brightness(0.8); } }

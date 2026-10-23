@@ -367,3 +367,9 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
     nueva lee el certificado cifrado de CertificadoClaves (CnEcf) con CertKeyEncryption:MasterKey, que esta en el
     web.config de cada sitio: el paquete NO trae web.config (la primera prueba lo piso y la API fallo; se restauro). La
     8005 queda con la version nueva. En Azure: confirmar donde esta la MasterKey antes de publicar.
+12. CORRECCION (2026-10-23): la API de Azure (webencf-gqhge4beeteebnah) NO es la del hotel. La que usa Delphi en la nube
+    es la de Parametro.UrlApiEcf de HotelPruebas: https://132028211.net (con X-Api-Key, que HotelWeb ya manda desde
+    Parametro.ClaveApiEcf). Esa YA tiene EnviarDesdeHotel, FirmarDesdeHotel y DocumentosXml (version intermedia: le
+    faltan Diagnostico/Ambiente y Certificado/Estado|Cargar, que HotelWeb no usa). Para HotelWeb no hay que actualizar
+    nada en la nube: basta Parametro.UrlApiEcf/ClaveApiEcf de la base real. El paquete C:\Publish_WebEncf_Azure (probado)
+    queda como actualizacion opcional de esa API; el sitio de Azure es de otra empresa.
