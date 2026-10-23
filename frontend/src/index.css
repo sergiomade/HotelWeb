@@ -316,6 +316,8 @@ fieldset.grupo:has(.precios-reserva) { padding: 6px 10px 8px; gap: 4px; }
 .grupo-cargo { display: grid; gap: 10px; padding: 12px; margin: 0 0 14px; border: 1px solid var(--borde); border-radius: 8px; background: var(--fondo); }
 .grupo-cargo p { margin: 0; }
 .grupo-cargo .tres { grid-template-columns: 1fr 1.4fr 1.2fr; }
+.grupo-cargo .dos { display: grid; grid-template-columns: 1fr 2fr; gap: 10px; }
+.grupo-cargo details ul { margin: 4px 0 0; padding-left: 18px; }
 button.chico { padding: 0.15em 0.6em; font-size: 0.85em; }
 
 /* recibos en la cuenta */
@@ -335,6 +337,7 @@ button.chico { padding: 0.15em 0.6em; font-size: 0.85em; }
 .barra-cuenta button { flex: 1 1 180px; padding: 0.7em 1em; font-weight: 600; }
 .boton-cargo { background: var(--ocupada-borde); color: #fff; }
 .boton-pago { background: var(--ok); color: #fff; }
+.barra-cuenta .boton-mover { flex: 0 1 auto; font-weight: 500; }
 @media (prefers-color-scheme: dark) { .boton-cargo, .boton-pago { color: #0b1217; } }
 
 /* menu principal: fondo negro y letras blancas (pedido del usuario) */

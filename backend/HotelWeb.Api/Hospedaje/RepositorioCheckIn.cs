@@ -206,6 +206,9 @@ public sealed class RepositorioCheckIn
                 return mayor && a.Tarifa == l.Tarifa && a.Categoria == cat;
             });
         var finales = RepartoCheckIn.Repartir(lineas.Select(Original).ToList(), completas, n => tipoDe[n]);
+        if (ReglasCambioHabitacion.Conflicto(finales.Select(f => (f.Tipo, f.Categoria, f.Tarifa)),
+                t => tipos.TryGetValue(t, out var n) ? n : $"tipo {t}") is { } conflicto)
+            throw new ErrorCatalogo(conflicto);
         var noches = ReglasReserva.Noches(r.FechaEntrada, r.FechaSalida);
         var filas = new List<(FilaLinea Linea, int Numero)>();
         foreach (var f in finales)

@@ -45,7 +45,7 @@ public sealed class RepositorioHospedaje
                ISNULL((SELECT TOP 1 x.Tarifa FROM HotelHabitacionReservada x WITH (NOLOCK)
                         WHERE x.HabitacionReserva_id = a.HabitacionReserva_id AND x.CategoriaPrecio_id = a.CategoriaPrecio_id
                           AND x.Habitacion_id = a.TipoHabitacion), 0) AS Tarifa,
-               r.FechaSalida, CAST(ISNULL(a.Transferida, 0) AS bit) AS Transferida,
+               dbo.Fn_SalidaCuenta(a.Factura_id) AS FechaSalida, CAST(ISNULL(a.Transferida, 0) AS bit) AS Transferida,
                (SELECT COUNT(*) FROM HotelFacturaDetalle d {0}
                  WHERE d.Factura_id = a.Factura_id AND d.Descripcion = @texto) AS YaCargada
         FROM HotelFactura a {0}

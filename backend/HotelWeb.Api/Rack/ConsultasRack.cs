@@ -19,7 +19,7 @@ internal static class ConsultasRack
                 COALESCE(NULLIF(RTRIM(f.Huesped), ''), NULLIF(RTRIM(r.Huesped), ''), RTRIM(c.Nombre)) AS Huesped,
                 RTRIM(c.Nombre)                         AS Cliente,
                 r.FechaEntrada                          AS FechaEntrada,
-                r.FechaSalida                           AS FechaSalida,
+                CASE WHEN f.Factura_id IS NULL THEN NULL ELSE dbo.Fn_SalidaCuenta(f.Factura_id) END AS FechaSalida,
                 d.Personas                              AS Personas,
                 CAST(ISNULL(d.Credito, 0) AS bit)       AS Credito,
                 CASE WHEN f.Factura_id IS NULL THEN NULL ELSE dbo.BalanceActualHabitacion(f.Factura_id) END AS Saldo,
@@ -60,7 +60,7 @@ internal static class ConsultasRack
                 CAST(CASE WHEN c.CodigoCompFiscal = 13 THEN 1 ELSE 0 END AS bit) AS RegimenEspecial,
                 r.HabitacionReserva_id                  AS Reserva,
                 r.FechaEntrada                          AS FechaEntrada,
-                r.FechaSalida                           AS FechaSalida,
+                CASE WHEN f.Factura_id IS NULL THEN NULL ELSE dbo.Fn_SalidaCuenta(f.Factura_id) END AS FechaSalida,
                 RTRIM(f.CategoriaPrecio_id)             AS Categoria,
                 CAST(ISNULL(f.Transferida, 0) AS bit)   AS Transferida,
                 dbo.BalanceActualHabitacion(f.Factura_id) AS Saldo

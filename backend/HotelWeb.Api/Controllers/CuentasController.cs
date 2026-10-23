@@ -14,6 +14,12 @@ public sealed record SolicitudPago(int FormaPago, string Descripcion, decimal Mo
 
 public sealed record SolicitudRecibo(string? Concepto, IReadOnlyList<SolicitudPago> Pagos);
 
+/// <param name="Todas">Tambien las demas habitaciones abiertas de la misma reserva.</param>
+public sealed record SolicitudSalida(DateTime Salida, bool Todas, string? Comentario);
+
+/// <param name="Tarifa">Sin impuestos; null = la de ahora (mismo tipo y categoria) o la de la tabla de precios.</param>
+public sealed record SolicitudCambio(int Hasta, string? Categoria, decimal? Tarifa);
+
 /// <summary>
 /// Cargos a la cuenta de una habitacion (etapa 4). Cualquier usuario carga, como en Delphi; anular un cargo lo hacen
 /// los de Permisos:AnulanCargos.
@@ -24,16 +30,49 @@ public sealed class CuentasController : ControllerBase
 {
     private readonly RepositorioCuentas _cuentas;
     private readonly RepositorioRecibos _recibos;
+    private readonly RepositorioSalidas _salidas;
+    private readonly RepositorioCambioHabitacion _cambio;
     private readonly PermisosWeb _permisos;
     private readonly ILogger<CuentasController> _log;
 
-    public CuentasController(RepositorioCuentas cuentas, RepositorioRecibos recibos, PermisosWeb permisos, ILogger<CuentasController> log)
+    public CuentasController(RepositorioCuentas cuentas, RepositorioRecibos recibos, RepositorioSalidas salidas,
+        RepositorioCambioHabitacion cambio, PermisosWeb permisos, ILogger<CuentasController> log)
     {
         _cuentas = cuentas;
         _recibos = recibos;
+        _salidas = salidas;
+        _cambio = cambio;
         _permisos = permisos;
         _log = log;
     }
+
+    /// <summary>Para cambiar a otra habitacion libre: lo que se cobra hoy y las libres.</summary>
+    [HttpGet("cambio")]
+    public ActionResult<PreparacionCambio> PrepararCambio(int habitacion) => Hacer(() => _cambio.Preparar(habitacion));
+
+    /// <summary>Mover la cuenta a una habitacion libre (cualquier usuario de recepcion, como en Delphi).</summary>
+    [HttpPost("cambio")]
+    public ActionResult<ResultadoCambio> Cambiar(int habitacion, SolicitudCambio s) => Hacer(() =>
+    {
+        var r = _cambio.Cambiar(habitacion, s.Hasta, s.Categoria, s.Tarifa, Login);
+        _log.LogInformation("{Usuario} cambio la cuenta {Factura} de la habitacion {Desde} a la {Hasta} ({Accion}, tarifa {Tarifa})",
+            Login, r.Factura, habitacion, s.Hasta, r.Accion, s.Tarifa);
+        return r;
+    });
+
+    /// <summary>La salida de la habitacion, las demas de su reserva y los cambios hechos.</summary>
+    [HttpGet("salida")]
+    public ActionResult<SalidaCuenta> Salida(int habitacion) => Hacer(() => _salidas.Ver(habitacion));
+
+    /// <summary>Cambiar la salida (cualquier usuario de recepcion, como el check-in).</summary>
+    [HttpPost("salida")]
+    public ActionResult<ResultadoSalida> CambiarSalida(int habitacion, SolicitudSalida s) => Hacer(() =>
+    {
+        var r = _salidas.Cambiar(habitacion, s.Salida, s.Todas, s.Comentario, Login, DateTime.Today);
+        _log.LogInformation("{Usuario} cambio la salida de la habitacion {Habitacion} al {Salida} (todas: {Todas})",
+            Login, habitacion, s.Salida.ToString("yyyy-MM-dd"), s.Todas);
+        return r;
+    });
 
     /// <summary>Recibos de pago de la estadia actual de la habitacion.</summary>
     [HttpGet("recibos")]

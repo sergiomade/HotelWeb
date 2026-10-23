@@ -159,4 +159,17 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   STP_CuadreDeCaja (Posteado = 0) sin mirar el estatus. Decision del usuario: anular = Estatus Anulado, el pago sale de
   la cuenta (lineas inactivas) y Posteado = 1 para que el cuadre no lo cuente; solo antes del cuadre y con la cuenta
   abierta. Probado contra Hotel_new (102 restaurada). Falta prueba del usuario. 155 pruebas.
-- Falta de la etapa 4: cambio de salida, cambio de habitacion y transferencia a ocupada; impresion del recibo (despues).
+- Falta de la etapa 4: cambio de salida, cambio de habitacion y transferencia a ocupada; impresion del recibo (despues).- Etapa 4, parte 4a HECHA (2026-10-23): cambio de salida (`/api/cuentas/{habitacion}/salida`). Delphi no lo tiene (la
+  reserva hospedada no se edita; STP_CargarHospedajeDiario no mira la salida). Decision del usuario: salida POR
+  HABITACION en una tabla nueva, MIG_24 (HotelCambioSalida + dbo.Fn_SalidaCuenta; Delphi no la usa). Si todas las
+  cuentas abiertas de la reserva quedan con la misma salida, cambia tambien la reserva (FechaSalida, CantidadNoches,
+  importes). Rack, cuenta, carga de la noche y disponibilidad usan Fn_SalidaCuenta. LA WEB REQUIERE MIG_24.
+- Decision del usuario (2026-10-23): cambio a habitacion LIBRE de otro tipo = como el check-in (precio del tipo nuevo
+  desde la proxima noche; "Respetar precio reservado" si la nueva es mas cara). Delphi solo cambia el numero.
+- Etapa 4, parte 4b HECHA (2026-10-23): cambio a habitacion libre (`/api/cuentas/{habitacion}/cambio`). Mueve
+  HotelFactura (numero, TipoHabitacion, CategoriaPrecio_id), sus recibos (HotelReciboIngreso.Habitacion; Delphi los
+  dejaba en la vieja) y sus cambios de salida. Linea de la reserva: solo numero / actualizar (cantidad 1) / separar.
+  Regla nueva (tambien en el check-in): no dos lineas de la reserva con el mismo tipo y categoria a distinta tarifa,
+  porque STP_CargarHospedajeDiario toma la primera (TOP 1 sin orden). Sin linea de reserva: solo cambia el numero.
+- Falta de la etapa 4: transferencia a ocupada (Stp_TransferiraOcupada; estudiar sus impuestos 1.018/1.010 y el
+  0.28 del origen antes de usarla).

@@ -607,3 +607,47 @@ export function fecha(iso: string | null | undefined, conAno = false): string {
   const [a, m, d] = iso.slice(0, 10).split('-')
   return conAno || a !== String(new Date().getFullYear()) ? `${d}/${m}/${a}` : `${d}/${m}`
 }
+
+// ---- hospedaje: cambio de salida (MIG_24) ----
+
+export interface CambioSalida { fecha: string; habitacion: number; anterior: string | null; nueva: string; comentario: string | null; usuario: string | null }
+
+export interface SalidaCuenta {
+  habitacion: number
+  factura: number
+  reserva: number | null
+  entrada: string
+  salida: string
+  salidaReserva: string | null
+  transferida: boolean
+  /** Las demas habitaciones abiertas de la misma reserva, con su salida. */
+  otras: { habitacion: number; salida: string }[]
+  cambios: CambioSalida[]
+}
+
+export const verSalida = (habitacion: number) => pedir<SalidaCuenta>(`/api/cuentas/${habitacion}/salida`)
+export const cambiarSalida = (habitacion: number, salida: string, todas: boolean, comentario: string) =>
+  pedir<{ salida: SalidaCuenta; cambioLaReserva: boolean; avisos: string[] }>(`/api/cuentas/${habitacion}/salida`, {
+    method: 'POST', body: JSON.stringify({ salida, todas, comentario }),
+  })
+
+// ---- hospedaje: cambio a una habitacion libre ----
+
+export interface PreparacionCambio {
+  habitacion: number
+  factura: number
+  reserva: number | null
+  tipo: number
+  tipoNombre: string
+  categoria: string
+  /** Lo que se cobra cada noche ahora (sin impuestos). */
+  tarifa: number
+  tieneLinea: boolean
+  libres: LibreCheckIn[]
+}
+
+export const prepararCambio = (habitacion: number) => pedir<PreparacionCambio>(`/api/cuentas/${habitacion}/cambio`)
+export const cambiarHabitacion = (habitacion: number, hasta: number, categoria: string, tarifa: number | null) =>
+  pedir<{ desde: number; hasta: number; factura: number; accion: string; avisos: string[] }>(`/api/cuentas/${habitacion}/cambio`, {
+    method: 'POST', body: JSON.stringify({ hasta, categoria, tarifa }),
+  })

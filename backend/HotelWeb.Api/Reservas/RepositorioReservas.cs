@@ -201,7 +201,7 @@ public sealed class RepositorioReservas
                    (SELECT COUNT(DISTINCT f.Habitacion_id) FROM HotelFactura f WITH (NOLOCK)
                       JOIN hotelHabitacion h ON h.Habitacion_id = f.Habitacion_id
                       LEFT JOIN HotelHabitacionReserva r WITH (NOLOCK) ON r.HabitacionReserva_id = f.HabitacionReserva_id
-                     WHERE h.HabitacionTipo = t.HabitacionTipo AND (r.FechaSalida IS NULL OR r.FechaSalida > @entrada)),
+                     WHERE h.HabitacionTipo = t.HabitacionTipo AND ISNULL(dbo.Fn_SalidaCuenta(f.Factura_id), @salida) > @entrada),
                    ISNULL((SELECT SUM(d.Cantidad) FROM HotelHabitacionReservada d WITH (NOLOCK)
                              JOIN HotelHabitacionReserva r WITH (NOLOCK) ON r.HabitacionReserva_id = d.HabitacionReserva_id
                             WHERE d.Habitacion_id = t.HabitacionTipo AND r.EstatusReservacion_id = 1
