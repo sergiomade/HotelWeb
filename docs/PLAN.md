@@ -276,3 +276,22 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   'CAFETERIA'). La E34 de la cafeteria acredita el TOTAL cobrado (OriginalNota.TotalCobrado). Probado en testecf:
   E340000000005 (390 a la E310000000239) y E340000000006 (anula la E310000000240 de BANCO BHD) ACEPTADAS. Usuario
   temporal 9901 creado y BORRADO. ETAPA 8 COMPLETA (falta el commit de 8d).
+
+## Etapa 9 (caja y reportes): decisiones del usuario (2026-10-23)
+- Partes: 9a cuadre y cierre de caja; 9b reportes de ventas y comprobantes; 9c reportes del hospedaje (habitaciones
+  ocupadas, proyeccion de reservaciones, maestro de clientes, canceladas sin cobro); 9d secuencias e-CF, E43 y E41.
+- Delphi: el cuadre del hotel (UFrmMntCuadredeCaja + STP_CuadreDeCaja) toma TODOS los recibos y adelantos con
+  Posteado = 0, resume por forma de pago y al "cerrar el turno" los marca Posteado = 1 (de todos los usuarios). El total
+  sumaba los US$ con los pesos. La cafeteria tiene su "cambio de turno" (conteo por billetes, FaCambiodeTurno): casi no
+  se usa (2 veces desde 2025, pruebas).
+- Decisiones: dos cuadres (hotel y cafeteria); el cajero escribe lo contado (efectivo y dolares) y queda la diferencia
+  (con diferencia, el comentario es obligatorio); cada cajero cierra SOLO lo suyo.
+- MIG_25 (Hotel\Sql\Migracion): HotelCierreCaja + HotelCierreCajaDetalle (R recibo, A adelanto, F factura de la
+  cafeteria). Aplicada en Hotel_new y HotelPruebas (2026-10-23). Falta la real.
+- Hallazgo (etapa 3): la web grababa los adelantos con Posteado = 1 y no entraban en ningun cuadre; Delphi los deja en 0
+  (valor por omision) y el cuadre los marca. Corregido: Posteado = 0; anular un adelanto sin cerrar lo marca 1.
+- Parte 9a HECHA (2026-10-23, sin commit): Recepcion > Caja y Cafeteria > Caja (`/api/caja/{hotel|cafeteria}/...`),
+  reporte carta `/cierre/{n}` con firmas. Hotel: recibos (incluye walk-in) y adelantos del usuario sin postear; PAY-OUT
+  sale del efectivo; credito y notas de credito no son dinero; dolares aparte en US$. Cafeteria: lo que el usuario cobro
+  (faFacturaPago) que no esta en un cierre, desde su primer cierre (o desde hoy). Si entra un cobro mientras cuenta, no
+  cierra. Probado en Hotel_new: cierres 1 (cafeteria) y 2 (hotel, faltan 100 con comentario).

@@ -308,10 +308,11 @@ public sealed class RepositorioReservas
         if (cn.ExecuteScalar<int>("SELECT COUNT(*) FROM ConMonedas WHERE Monedas_id = @formaPago", new { formaPago }, tx) == 0)
             throw new ErrorCatalogo("Esa forma de pago no existe.");
         // como Delphi (QCambioDivisaNewRecord): fecha de hoy sin hora, el cliente de la reserva y estado Activa.
-        // Posteado = 1, como todos los que ya hay (Delphi no lo cambia).
+        // Posteado = 0, como Delphi (el valor por omision de la tabla): lo toma el cuadre de caja y lo marca al cerrar.
+        // (Hasta 2026-10-23 la web ponia 1 y sus adelantos no entraban en ningun cuadre.)
         cn.Execute("""
             INSERT INTO HotelReservaAdelanto (Fecha, Reserva_id, Cliente_id, Monto, Montous, Monedas_id, Usuario, Estatus, Posteado)
-            VALUES (CAST(GETDATE() AS date), @id, @cliente, @monto, @montoUs, @formaPago, @usuario, 'Activa', 1)
+            VALUES (CAST(GETDATE() AS date), @id, @cliente, @monto, @montoUs, @formaPago, @usuario, 'Activa', 0)
             """, new { id, cliente = r.Cliente ?? 0, monto, montoUs = formaPago == ReglasAdelanto.Dolares ? montoUs : null,
                        formaPago, usuario = Usuario(usuario) }, tx);
         tx.Commit();
@@ -330,7 +331,8 @@ public sealed class RepositorioReservas
             "SELECT Estatus FROM HotelReservaAdelanto WHERE ReservaAdelando_id = @adelanto AND Reserva_id = @id", new { id, adelanto }, tx)
             ?? throw new ErrorCatalogo($"El adelanto {adelanto} no es de la reserva {id}.");
         if (ReglasAdelanto.ValidarAnular(estatus, estado) is { } motivo) throw new ErrorCatalogo(motivo);
-        cn.Execute("UPDATE HotelReservaAdelanto SET Estatus = 'Anulada' WHERE ReservaAdelando_id = @adelanto", new { adelanto }, tx);
+        // anulado antes del cierre: no entra en ningun cuadre (tampoco en el de Delphi, que no mira el estatus)
+        cn.Execute("UPDATE HotelReservaAdelanto SET Estatus = 'Anulada', Posteado = 1 WHERE ReservaAdelando_id = @adelanto", new { adelanto }, tx);
         tx.Commit();
         return Obtener(cn, null, id)!;
     }

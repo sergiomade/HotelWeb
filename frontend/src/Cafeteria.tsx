@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import CobroCafeteria from './CobroCafeteria'
+import Caja from './Caja'
 import Facturas from './Facturas'
 import Fondo from './Fondo'
 import {
@@ -19,14 +20,16 @@ const hora = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString('es
  * Cobro con e-CF o a la habitacion (8b, 8c) y la lista de facturas con sus notas de credito (8d).
  */
 export default function Cafeteria({ alVencer }: { alVencer: () => void }) {
-  const [vista, setVista] = useState<'mesas' | 'facturas'>('mesas')
+  const [vista, setVista] = useState<'mesas' | 'facturas' | 'caja'>('mesas')
   return (
     <>
       <div className="pestanas" role="tablist" aria-label="Cafetería">
         <button type="button" role="tab" aria-selected={vista === 'mesas'} className={vista === 'mesas' ? 'activo' : ''} onClick={() => setVista('mesas')}>Mesas</button>
         <button type="button" role="tab" aria-selected={vista === 'facturas'} className={vista === 'facturas' ? 'activo' : ''} onClick={() => setVista('facturas')}>Facturas</button>
+        <button type="button" role="tab" aria-selected={vista === 'caja'} className={vista === 'caja' ? 'activo' : ''} onClick={() => setVista('caja')}>Caja</button>
       </div>
-      {vista === 'mesas' ? <Mesas alVencer={alVencer} /> : <Facturas alVencer={alVencer} ambito="cafeteria" />}
+      {vista === 'mesas' ? <Mesas alVencer={alVencer} /> : vista === 'facturas' ? <Facturas alVencer={alVencer} ambito="cafeteria" />
+        : <Caja ambito="cafeteria" alVencer={alVencer} />}
     </>
   )
 }

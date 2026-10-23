@@ -489,3 +489,14 @@ button.chico { padding: 0.15em 0.6em; font-size: 0.85em; }
 .cobro-cabeza h2 { margin: 0; }
 .habitaciones-cargo { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); margin: 10px 0; }
 .habitaciones-cargo .mesa span:nth-child(2) { font-size: 0.8rem; text-align: center; overflow-wrap: anywhere; }
+
+/* ---- caja (etapa 9a) ---- */
+.caja .filtros p { margin: 0; }
+.caja-cuerpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 380px); gap: 20px; align-items: start; margin-bottom: 20px; }
+.caja-cuerpo h3 { margin-top: 0; }
+.caja-cuerpo details { margin-top: 12px; }
+.caja-cierre { display: grid; gap: 10px; }
+.caja-cierre p { margin: 0; }
+@media (max-width: 860px) { .caja-cuerpo { grid-template-columns: 1fr; } }
+.firmas { display: flex; justify-content: space-around; gap: 40px; margin-top: 60px; }
+.firmas div { flex: 1; max-width: 260px; text-align: center; border-top: 1px solid #000; padding-top: 4px; }

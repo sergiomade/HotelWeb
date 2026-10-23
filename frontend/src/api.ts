@@ -1008,3 +1008,57 @@ export interface ResultadoCargo { factura: number; mesa: number; habitacion: num
 export const habitacionesCafeteria = () => pedir<HabitacionCafeteria[]>(`${CAFE}/habitaciones`)
 export const cargarAHabitacion = (mesa: number, habitacion: number) =>
   pedir<ResultadoCargo>(`${CAFE}/mesas/${mesa}/habitacion`, { method: 'POST', body: JSON.stringify({ habitacion }) })
+
+// ---- etapa 9a: cuadre y cierre de caja ----
+
+export type AmbitoCaja = 'hotel' | 'cafeteria'
+export type ClaseForma = 'Efectivo' | 'Dolares' | 'OtroDinero' | 'SinDinero' | 'Salida'
+
+export interface MovimientoCaja {
+  tipo: string
+  numero: number
+  fecha: string
+  referencia: string | null
+  nombre: string | null
+  forma: number
+  formaNombre: string
+  monto: number
+  montoUs: number
+}
+
+export interface ResumenCaja {
+  formas: { forma: number; nombre: string; clase: ClaseForma; cantidad: number; monto: number; montoUs: number }[]
+  ingresos: number
+  efectivo: number
+  dolares: number
+  sinDinero: number
+}
+
+export interface CuadreCaja { ambito: string; usuario: string; desde: string | null; movimientos: MovimientoCaja[]; resumen: ResumenCaja }
+
+export interface CierreResumen {
+  cierre: number
+  ambito: string
+  usuario: string
+  hasta: string
+  total: number
+  esperadoEfectivo: number
+  contadoEfectivo: number
+  esperadoDolares: number
+  contadoDolares: number
+  comentario: string | null
+}
+
+export interface CierreImpreso {
+  emisor: { rnc: string; razonSocial: string; direccion: string; telefono: string | null }
+  cierre: CierreResumen
+  desde: string | null
+  movimientos: MovimientoCaja[]
+  resumen: ResumenCaja
+}
+
+export const cuadreCaja = (ambito: AmbitoCaja) => pedir<CuadreCaja>(`/api/caja/${ambito}/pendiente`)
+export const cierresCaja = (ambito: AmbitoCaja) => pedir<CierreResumen[]>(`/api/caja/${ambito}/cierres`)
+export const cerrarCaja = (ambito: AmbitoCaja, d: { efectivo: number; dolares: number; comentario: string; movimientos: number; ingresos: number }) =>
+  pedir<CierreResumen>(`/api/caja/${ambito}/cerrar`, { method: 'POST', body: JSON.stringify(d) })
+export const cierreImpreso = (cierre: number) => pedir<CierreImpreso>(`/api/caja/cierres/${cierre}`)
