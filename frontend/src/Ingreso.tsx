@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { ingresar, type Sesion } from './api'
 
 /** Ingreso con el mismo usuario y clave de Delphi. */
-export default function Ingreso({ alIngresar }: { alIngresar: (s: Sesion) => void }) {
+export default function Ingreso({ alIngresar, empresa }: { alIngresar: (s: Sesion) => void; empresa?: string }) {
   const [usuario, setUsuario] = useState('')
   const [clave, setClave] = useState('')
   const [error, setError] = useState('')
@@ -26,7 +26,7 @@ export default function Ingreso({ alIngresar }: { alIngresar: (s: Sesion) => voi
     <main className="ingreso">
       <form className="tarjeta" onSubmit={enviar}>
         <img src="/hotel.svg" alt="" width={48} height={48} />
-        <h1>Hotel</h1>
+        <h1>{empresa || 'Hotel'}</h1>
         <p className="tenue">Use el mismo usuario y clave del programa del hotel.</p>
         <label>
           Usuario

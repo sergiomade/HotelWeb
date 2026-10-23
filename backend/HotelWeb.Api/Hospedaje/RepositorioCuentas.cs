@@ -68,6 +68,9 @@ public sealed class RepositorioCuentas
             new { t.SubTotal, t.Itbis, t.Propina, t.Total, factura = e.Factura_id }, tx);
     }
 
+    /// <summary>Recalcula el encabezado de la cuenta abierta de la habitacion (lo usan los recibos).</summary>
+    internal static void Recalcular(IDbConnection cn, IDbTransaction tx, int habitacion) => Recalcular(cn, tx, Cuenta(cn, tx, habitacion));
+
     public CuentaHabitacion Cargar(int habitacion, NuevoCargo cargo, string usuario)
     {
         var c = ReglasCargo.Normalizar(cargo);

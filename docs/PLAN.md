@@ -151,4 +151,12 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   Permisos:AnulanCargos). Recalcula el encabezado de HotelFactura con ITBIS y propina TRUNCADOS a 2 decimales como
   Delphi. No se cargan a mano los servicios 3, 7, 11; no se anulan pagos, adelantos, transferencias, cafeteria ni
   PAY-OUT. Desde el panel de la cuenta del rack. Probado contra Hotel_new (102 restaurada) y por el usuario.
-  145 pruebas.
+  145 pruebas.- Etapa 4, parte 3 HECHA (2026-10-22): recibos de pago (`/api/cuentas/{habitacion}/recibos`, `/api/recibos/{n}/anular` con
+  Permisos:AnulanRecibos). Como Delphi: HotelReciboIngreso + HotelReciboDetalle (una linea por forma de pago, todas a la
+  habitacion del recibo; PAY-OUT en negativo), numero mayor + 1, STP_CARGARPAGOAHABITACION y recalculo del encabezado.
+  Hallazgos: el "Anular" de Delphi llama a Stp_AnularRecibodeIngreso, que trabaja sobre IngRecibos (cuentas por
+  cobrar) y NO anula el recibo del hotel (de 8048, ninguno anulado); crear un recibo no hace asiento: lo toma
+  STP_CuadreDeCaja (Posteado = 0) sin mirar el estatus. Decision del usuario: anular = Estatus Anulado, el pago sale de
+  la cuenta (lineas inactivas) y Posteado = 1 para que el cuadre no lo cuente; solo antes del cuadre y con la cuenta
+  abierta. Probado contra Hotel_new (102 restaurada). Falta prueba del usuario. 155 pruebas.
+- Falta de la etapa 4: cambio de salida, cambio de habitacion y transferencia a ocupada; impresion del recibo (despues).

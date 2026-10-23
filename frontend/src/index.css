@@ -258,6 +258,10 @@ select, textarea {
 .marcas-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 14px; }
 label.check { display: flex; align-items: center; gap: 6px; }
 label.check input { width: auto; }
+/* aviso de otro tipo en el check-in: mensaje y casilla en un bloque, alineados a la izquierda */
+.aviso-tipo { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; margin-top: 4px; font-size: 0.85em; }
+.aviso-tipo label.check { font-size: 1em; margin: 0; }
+.aviso-tipo label.check input { margin: 0; }
 @media (max-width: 760px) { .catalogos { width: 100%; } .dialogo .dos { grid-template-columns: 1fr; } }
 
 .tabla tr.apagada td { color: var(--tenue); }
@@ -313,3 +317,49 @@ fieldset.grupo:has(.precios-reserva) { padding: 6px 10px 8px; gap: 4px; }
 .grupo-cargo p { margin: 0; }
 .grupo-cargo .tres { grid-template-columns: 1fr 1.4fr 1.2fr; }
 button.chico { padding: 0.15em 0.6em; font-size: 0.85em; }
+
+/* recibos en la cuenta */
+.acciones-cuenta { display: grid; gap: 4px; margin-bottom: 8px; }
+.acciones-cuenta > p, .recibos-cuenta > p { margin: 0 0 6px; }
+.recibos-cuenta h3 { margin: 10px 0 6px; font-size: 1em; }
+.pago-linea { display: grid; grid-template-columns: 1.1fr 1.4fr 1fr auto; gap: 8px; align-items: end; }
+.pago-linea:has(label:nth-of-type(4)) { grid-template-columns: 1fr 1.2fr 1fr 1fr auto; }
+@media (max-width: 640px) { .pago-linea, .pago-linea:has(label:nth-of-type(4)) { grid-template-columns: 1fr 1fr; } }
+
+/* panel de la cuenta: 6 % mas ancho (560 -> 594) a pedido del usuario */
+.panel { width: min(594px, 100%); }
+
+/* panel de la cuenta: 10 % mas (594 -> 654); los dos botones en una barra, de distinto color */
+.panel { width: min(654px, 100%); }
+.barra-cuenta { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; }
+.barra-cuenta button { flex: 1 1 180px; padding: 0.7em 1em; font-weight: 600; }
+.boton-cargo { background: var(--ocupada-borde); color: #fff; }
+.boton-pago { background: var(--ok); color: #fff; }
+@media (prefers-color-scheme: dark) { .boton-cargo, .boton-pago { color: #0b1217; } }
+
+/* menu principal: fondo negro y letras blancas (pedido del usuario) */
+.barra { background: #000; color: #fff; border-bottom-color: #000; }
+.barra .menu button { color: #d0d6dc; background: transparent; border-color: transparent; }
+.barra .menu button:hover { color: #fff; background: #222; }
+.barra .menu button.activo { color: #fff; background: #2b2b2b; border-color: #555; }
+.barra .usuario { color: #fff; }
+.barra button.secundario { color: #fff; border-color: #666; background: transparent; }
+.barra button.secundario:hover { background: #222; }
+
+.marca { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; }
+
+/* rack: menos espacio entre el titulo, la leyenda y el plano (para que las habitaciones suban) */
+.contenido.ancho { padding-top: 8px; }
+.rack .rack-cabecera h2 { margin: 0; }
+.rack .leyenda { margin: 4px 0 8px; }
+.rack .leyenda .chip { padding: 0.15em 0.65em; }
+
+/* rack: el titulo mas arriba (todo lo demas sube con el) */
+.contenido.ancho:has(.rack) { padding-top: 2px; }
+.rack .rack-cabecera { gap: 6px; }
+.rack .rack-cabecera h2 { font-size: 1.3em; line-height: 1.1; }
+
+/* reserva: el importe alineado como la tarifa (mismo ancho, margen y borde que el campo) */
+.tabla.lineas td.num input.numero { margin-left: auto; display: block; }
+.valor-linea { display: inline-block; min-width: 7.5em; padding: 0.5em 0.7em; border: 1px solid transparent; text-align: right; font-variant-numeric: tabular-nums; }
+.tabla.lineas input.numero.ancho { font-variant-numeric: tabular-nums; }

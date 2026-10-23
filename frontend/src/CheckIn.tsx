@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Fondo from './Fondo'
 import {
-  buscarClientes, dinero, fecha, hacerCheckIn, llegadasHoy, prepararCheckIn, SesionVencida,
-  type Asignacion, type ClienteResumen, type LlegadaHoy, type PreparacionCheckIn,
+  buscarClientes, dinero, FACTOR_IMPUESTOS, fecha, hacerCheckIn, llegadasHoy, obtenerPrecios, prepararCheckIn, SesionVencida,
+  type Asignacion, type ClienteResumen, type LlegadaHoy, type LugarCheckIn, type PantallaPrecios, type PreparacionCheckIn,
 } from './api'
 
 /** Llegadas de hoy (y atrasadas) y el check-in de cada una. */
@@ -69,6 +69,10 @@ function Asignar({ reserva, alCerrar, alVencer }: {
 }) {
   const [p, setP] = useState<PreparacionCheckIn | null>(null)
   const [elegidas, setElegidas] = useState<Record<string, number>>({})
+  // categoria y tarifa (sin impuestos) de cada lugar; la tarifa null = ese tipo no tiene precio en esa categoria
+  // respetar: el hotel no cumplio con el tipo reservado y le mantiene al cliente el precio acordado
+  const [precio, setPrecio] = useState<Record<string, { categoria: string; tarifa: number | null; respetar?: boolean }>>({})
+  const [tabla, setTabla] = useState<PantallaPrecios['tabla'] | null>(null)
   const [cliente, setCliente] = useState<ClienteResumen | null>(null)
   const [error, setError] = useState('')
   const [enviando, setEnviando] = useState(false)
@@ -84,8 +88,52 @@ function Asignar({ reserva, alCerrar, alVencer }: {
       const inicial: Record<string, number> = {}
       r.lugares.forEach((l) => { if (l.sugerida) inicial[`${l.secuencia}-${l.indice}`] = l.sugerida })
       setElegidas(inicial)
+      const pr: Record<string, { categoria: string; tarifa: number | null }> = {}
+      r.lugares.forEach((l) => { pr[`${l.secuencia}-${l.indice}`] = { categoria: l.categoria || 'A', tarifa: l.tarifa } })
+      setPrecio(pr)
     }).catch(manejar)
+    obtenerPrecios().then((x) => setTabla(x.tabla)).catch(manejar)
   }, [reserva, manejar])
+
+  /** La tarifa de un lugar: la reservada si no cambia el tipo ni la categoria; si cambia, la de la tabla de precios. */
+  function tarifaPara(l: LugarCheckIn, numero: number | undefined, categoria: string): number | null {
+    const tipo = p?.libres.find((x) => x.numero === numero)?.tipo ?? l.tipo
+    if (tipo === l.tipo && categoria === (l.categoria || 'A')) return l.tarifa
+    return tabla?.precios.find((x) => x.tipo === tipo && x.categoria === categoria)?.sinImpuestos ?? null
+  }
+
+  /**
+   * Respetar el precio reservado protege al cliente: solo se ofrece si la habitacion que se da cuesta MAS que lo
+   * reservado (su precio en la categoria reservada). Si cuesta menos, se cobra la mas barata. Sin precio en la tabla,
+   * se ofrece (no se sabe si es mas cara).
+   */
+  function puedeRespetar(l: LugarCheckIn, numero: number | undefined): boolean {
+    const tipo = p?.libres.find((x) => x.numero === numero)?.tipo
+    if (tipo == null || tipo === l.tipo) return false
+    const nuevo = tarifaPara(l, numero, l.categoria || 'A')
+    return nuevo == null || nuevo > l.tarifa
+  }
+
+  function elegir(l: LugarCheckIn, numero: number) {
+    const clave = `${l.secuencia}-${l.indice}`
+    setElegidas({ ...elegidas, [clave]: numero })
+    const actual = precio[clave]
+    if (actual?.respetar && puedeRespetar(l, numero)) return   // sigue con el precio reservado
+    const cat = actual?.categoria ?? (l.categoria || 'A')
+    setPrecio({ ...precio, [clave]: { categoria: cat, tarifa: tarifaPara(l, numero, cat) } })
+  }
+
+  function cambiarCategoria(l: LugarCheckIn, categoria: string) {
+    const clave = `${l.secuencia}-${l.indice}`
+    setPrecio({ ...precio, [clave]: { categoria, tarifa: tarifaPara(l, elegidas[clave], categoria) } })
+  }
+
+  /** Mantener (o dejar de mantener) la categoria y la tarifa reservadas aunque la habitacion sea de otro tipo. */
+  function respetarReservado(l: LugarCheckIn, si: boolean) {
+    const clave = `${l.secuencia}-${l.indice}`
+    const cat = l.categoria || 'A'
+    setPrecio({ ...precio, [clave]: si ? { categoria: cat, tarifa: l.tarifa, respetar: true } : { categoria: cat, tarifa: tarifaPara(l, elegidas[clave], cat) } })
+  }
 
   useEffect(() => {
     const tecla = (k: KeyboardEvent) => k.key === 'Escape' && alCerrar()
@@ -95,11 +143,15 @@ function Asignar({ reserva, alCerrar, alVencer }: {
 
   const usadas = useMemo(() => new Set(Object.values(elegidas)), [elegidas])
   const completas = p ? p.lugares.every((l) => elegidas[`${l.secuencia}-${l.indice}`]) : false
+  const sinTarifa = p ? p.lugares.some((l) => precio[`${l.secuencia}-${l.indice}`]?.tarifa == null) : false
   const faltaCliente = p ? !p.clienteId && !cliente : false
 
   async function confirmar() {
     if (!p) return
-    const asignaciones: Asignacion[] = p.lugares.map((l) => ({ secuencia: l.secuencia, indice: l.indice, habitacion: elegidas[`${l.secuencia}-${l.indice}`] }))
+    const asignaciones: Asignacion[] = p.lugares.map((l) => {
+      const clave = `${l.secuencia}-${l.indice}`
+      return { secuencia: l.secuencia, indice: l.indice, habitacion: elegidas[clave], categoria: precio[clave]?.categoria, tarifa: precio[clave]?.tarifa ?? undefined }
+    })
     const nums = asignaciones.map((a) => a.habitacion).join(', ')
     if (!window.confirm(`¿Hacer el check-in de la reserva ${p.reserva} en ${asignaciones.length === 1 ? 'la habitación' : 'las habitaciones'} ${nums}?`)) return
     setEnviando(true)
@@ -131,19 +183,19 @@ function Asignar({ reserva, alCerrar, alVencer }: {
               <ElegirCliente cliente={cliente} alElegir={setCliente} alError={manejar} />
             )}
             <table className="tabla">
-              <thead><tr><th>Reservado</th><th className="num">Tarifa</th><th>Personas</th><th>Habitación</th></tr></thead>
+              <thead><tr><th>Reservado</th><th>Personas</th><th>Habitación</th><th>Categoría</th><th className="num">Tarifa</th></tr></thead>
               <tbody>
                 {p.lugares.map((l) => {
                   const clave = `${l.secuencia}-${l.indice}`
                   const elegida = elegidas[clave]
                   const libre = p.libres.find((x) => x.numero === elegida)
+                  const pr = precio[clave] ?? { categoria: l.categoria || 'A', tarifa: l.tarifa }
                   return (
                     <tr key={clave}>
-                      <td>{l.tipoNombre}{l.categoria ? ` (${l.categoria})` : ''}</td>
-                      <td className="num">{dinero(l.tarifa)}</td>
+                      <td>{l.tipoNombre}{l.categoria ? ` (${l.categoria})` : ''}<span className="tenue fila-sub">{dinero(l.tarifa)} reservada</span></td>
                       <td>{l.adultos} adultos{l.ninos ? `, ${l.ninos} niños` : ''}{l.bebes ? `, ${l.bebes} bebés` : ''}{l.credito ? ' · crédito' : ''}</td>
                       <td>
-                        <select value={elegida ?? ''} onChange={(e) => setElegidas({ ...elegidas, [clave]: Number(e.target.value) })}>
+                        <select value={elegida ?? ''} onChange={(e) => elegir(l, Number(e.target.value))}>
                           <option value="">Escoja...</option>
                           <optgroup label={`Libres ${l.tipoNombre}`}>
                             {p.libres.filter((x) => x.tipo === l.tipo && x.disponible && (x.numero === elegida || !usadas.has(x.numero)))
@@ -154,8 +206,33 @@ function Asignar({ reserva, alCerrar, alVencer }: {
                               .map((x) => <option key={x.numero} value={x.numero}>{x.numero} · {x.tipoNombre}</option>)}
                           </optgroup>
                         </select>
-                        {libre && libre.tipo !== l.tipo && <span className="alerta fila-sub">Es {libre.tipoNombre}: se cobra la tarifa reservada.</span>}
+                        {libre && libre.tipo !== l.tipo && (
+                          <div className="aviso-tipo">
+                            <span className="alerta">
+                              Es {libre.tipoNombre}: {pr.respetar ? `se le respeta el precio de ${l.tipoNombre.toLowerCase()}.` : 'se cobra su precio.'}
+                            </span>
+                            {puedeRespetar(l, elegida) && <label className="check" title="La habitacion cuesta mas que lo reservado: el hotel le mantiene al cliente el precio acordado">
+                              <input type="checkbox" checked={!!pr.respetar} onChange={(e) => respetarReservado(l, e.target.checked)} />
+                              Respetar precio reservado
+                            </label>}
+                          </div>
+                        )}
                         {!elegida && !l.sugerida && <span className="alerta fila-sub">No hay {l.tipoNombre.toLowerCase()} libre: escoja otra.</span>}
+                      </td>
+                      <td>
+                        <select value={pr.categoria} disabled={pr.respetar} onChange={(e) => cambiarCategoria(l, e.target.value)}>
+                          {(tabla?.categorias ?? [{ id: pr.categoria, descripcion: pr.categoria }]).map((c) =>
+                            <option key={c.id} value={c.id}>{c.id}{c.descripcion && c.descripcion !== c.id ? ` · ${c.descripcion}` : ''}</option>)}
+                        </select>
+                      </td>
+                      <td className="num">
+                        <input className="numero ancho" inputMode="decimal" value={pr.tarifa ?? ''} disabled={pr.respetar}
+                               title={pr.tarifa != null ? `Sin impuestos. Con ITBIS y propina: ${dinero(Math.round(pr.tarifa * FACTOR_IMPUESTOS * 100) / 100)}` : ''}
+                               onChange={(e) => {
+                                 const v = e.target.value.replace(/,/g, '').trim()
+                                 setPrecio({ ...precio, [clave]: { ...pr, tarifa: v === '' || isNaN(Number(v)) ? null : Number(v) } })
+                               }} />
+                        {pr.tarifa == null && <span className="alerta fila-sub">Sin precio en esta categoría: escriba la tarifa.</span>}
                       </td>
                     </tr>
                   )
@@ -167,7 +244,7 @@ function Asignar({ reserva, alCerrar, alVencer }: {
         {error && <p className="error" role="alert">{error}</p>}
         <div className="botones">
           <button type="button" className="secundario" onClick={() => alCerrar()}>Cerrar</button>
-          <button type="button" onClick={confirmar} disabled={!p || !completas || faltaCliente || enviando}>
+          <button type="button" onClick={confirmar} disabled={!p || !completas || sinTarifa || faltaCliente || enviando}>
             {enviando ? 'Haciendo el check-in...' : 'Hacer el check-in'}
           </button>
         </div>

@@ -14,13 +14,18 @@ public sealed class PermisosWeb
     private readonly HashSet<int> _editanCatalogos;
     private readonly HashSet<int> _anulanAdelantos;
     private readonly HashSet<int> _anulanCargos;
+    private readonly HashSet<int> _anulanRecibos;
 
     public PermisosWeb(IConfiguration config)
     {
         _editanCatalogos = Lista(config, "Permisos:EditanCatalogos");
         _anulanAdelantos = ListaO(config, "Permisos:AnulanAdelantos", _editanCatalogos);
         _anulanCargos = ListaO(config, "Permisos:AnulanCargos", _editanCatalogos);
+        _anulanRecibos = ListaO(config, "Permisos:AnulanRecibos", _editanCatalogos);
     }
+
+    /// <summary>Anular un recibo de pago antes del cuadre (Permisos:AnulanRecibos, o la de catalogos).</summary>
+    public bool AnulaRecibos(int usuarioId) => _anulanRecibos.Contains(usuarioId);
 
     /// <summary>La lista de esa clave, o la de catalogos si no esta en appsettings.</summary>
     private static HashSet<int> ListaO(IConfiguration config, string clave, HashSet<int> otra) =>

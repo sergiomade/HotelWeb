@@ -247,10 +247,10 @@ export default function ReservaEditor({ id, alCerrar, alVencer }: {
                           <td><input className="numero" inputMode="numeric" value={l.ninos} onChange={(x) => cambiarLinea(i, { ninos: entero(x.target.value) })} /></td>
                           <td><input className="numero" inputMode="numeric" value={l.bebes} onChange={(x) => cambiarLinea(i, { bebes: entero(x.target.value) })} /></td>
                           <td><input type="checkbox" checked={l.credito} onChange={(x) => cambiarLinea(i, { credito: x.target.checked })} title="Crédito para la cafetería" /></td>
-                          <td><input className="numero ancho" inputMode="decimal" value={l.tarifa}
+                          <td className="num"><input className="numero ancho" inputMode="decimal" value={l.tarifa}
                                      title={`Sin impuestos. Con ITBIS y propina: ${dinero(Math.round(l.tarifa * FACTOR_IMPUESTOS * 100) / 100)}`}
                                      onChange={(x) => cambiarLinea(i, { tarifa: Number(x.target.value.replace(/,/g, '')) || 0 })} /></td>
-                          <td className="num">{dinero(l.cantidad * l.tarifa * Math.max(0, noches))}</td>
+                          <td className="num"><span className="valor-linea">{dinero(l.cantidad * l.tarifa * Math.max(0, noches))}</span></td>
                           <td><button type="button" className="secundario" onClick={() => setD({ ...d, lineas: d.lineas.filter((_, j) => j !== i) })} aria-label="Quitar">Quitar</button></td>
                         </tr>
                       )

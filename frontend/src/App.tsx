@@ -1,5 +1,5 @@
-import { useCallback, useState } from 'react'
-import { salir, sesionGuardada, type Sesion } from './api'
+import { useCallback, useEffect, useState } from 'react'
+import { obtenerEmpresa, salir, sesionGuardada, type Sesion } from './api'
 import Ingreso from './Ingreso'
 import Inicio from './Inicio'
 import Catalogos from './Catalogos'
@@ -12,21 +12,30 @@ type Pagina = 'rack' | 'recepcion' | 'reservas' | 'catalogos' | 'inicio'
 export default function App() {
   const [sesion, setSesion] = useState<Sesion | null>(() => sesionGuardada())
   const [pagina, setPagina] = useState<Pagina>('rack')
+  const [empresa, setEmpresa] = useState('')
+
+  // el nombre del hotel (Parametro.NombreEmpresa) en la barra, el ingreso y el titulo de la pestana
+  useEffect(() => {
+    obtenerEmpresa().then((e) => {
+      setEmpresa(e.nombre)
+      document.title = e.nombre
+    })
+  }, [])
   const cerrar = useCallback(() => {
     salir()
     setSesion(null)
   }, [])
 
-  if (!sesion) return <Ingreso alIngresar={setSesion} />
+  if (!sesion) return <Ingreso alIngresar={setSesion} empresa={empresa} />
 
   return (
     <div className="marco">
       <header className="barra">
-        <span className="marca"><img src="/hotel.svg" alt="" width={24} height={24} /> Hotel</span>
+        <span className="marca"><img src="/hotel.svg" alt="" width={24} height={24} /> {empresa || 'Hotel'}</span>
         <nav className="menu">
           <button type="button" className={pagina === 'rack' ? 'activo' : ''} onClick={() => setPagina('rack')}>Rack</button>
-          <button type="button" className={pagina === 'recepcion' ? 'activo' : ''} onClick={() => setPagina('recepcion')}>Recepción</button>
           <button type="button" className={pagina === 'reservas' ? 'activo' : ''} onClick={() => setPagina('reservas')}>Reservas</button>
+          <button type="button" className={pagina === 'recepcion' ? 'activo' : ''} onClick={() => setPagina('recepcion')}>Recepción</button>
           <button type="button" className={pagina === 'catalogos' ? 'activo' : ''} onClick={() => setPagina('catalogos')}>Catalogos</button>
           <button type="button" className={pagina === 'inicio' ? 'activo' : ''} onClick={() => setPagina('inicio')}>Sistema</button>
         </nav>

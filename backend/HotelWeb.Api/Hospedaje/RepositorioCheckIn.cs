@@ -127,6 +127,38 @@ public sealed class RepositorioCheckIn
             libres.Select(x => new LibreVista(x.Numero, x.Tipo, x.TipoNombre, x.Disponible)).ToList());
     }
 
+    private static LineaReservada Original(FilaLinea l) =>
+        new(l.Secuencia, l.Habitacion_id, l.CategoriaPrecio_id ?? "A", l.Tarifa, l.Cantidad);
+
+    /// <summary>
+    /// Cada habitacion con su categoria y su tarifa: si recepcion no mando tarifa y cambio el tipo o la categoria, la de
+    /// la tabla de precios (sin impuestos, como la reserva); si no cambio nada, la reservada.
+    /// </summary>
+    private static List<Asignacion> ConTarifa(IDbConnection cn, IDbTransaction tx, List<FilaLinea> lineas,
+        IReadOnlyList<Asignacion> elegidas, Func<int, int> tipoDe, Dictionary<(int, string), decimal> precios)
+    {
+        var categorias = cn.Query<string>("SELECT UPPER(RTRIM(CategoriaPrecio_id)) FROM HotelCategoriaPrecio", transaction: tx).ToHashSet();
+        var r = new List<Asignacion>();
+        foreach (var a in elegidas)
+        {
+            var l = lineas.First(x => x.Secuencia == a.Secuencia);
+            var reservada = (l.CategoriaPrecio_id ?? "A").Trim().ToUpperInvariant();
+            var categoria = string.IsNullOrWhiteSpace(a.Categoria) ? reservada : a.Categoria.Trim().ToUpperInvariant();
+            if (categoria != reservada && !categorias.Contains(categoria)) throw new ErrorCatalogo($"No existe la categoria de precio {categoria}.");
+            var tipo = tipoDe(a.Habitacion);
+            var tarifa = a.Tarifa;
+            if (tarifa is null)
+            {
+                if (tipo == l.Habitacion_id && categoria == reservada) tarifa = l.Tarifa;
+                else if (precios.TryGetValue((tipo, categoria), out var p)) tarifa = p;
+                else throw new ErrorCatalogo($"La habitacion {a.Habitacion} no tiene precio en la categoria {categoria}: pongalo en Precios o escriba la tarifa.");
+            }
+            if (tarifa < 0 || tarifa > 999_999_999m) throw new ErrorCatalogo($"La tarifa de la habitacion {a.Habitacion} no es valida.");
+            r.Add(a with { Categoria = categoria, Tarifa = tarifa });
+        }
+        return r;
+    }
+
     public ResultadoCheckIn Hacer(long reserva, IReadOnlyList<Asignacion> elegidas, long? clienteId, string usuario)
     {
         using var cn = _conexiones.Hotel();
@@ -153,16 +185,68 @@ public sealed class RepositorioCheckIn
         if (ReglasCheckIn.Validar(lugares, elegidas, libres) is { } motivo) throw new ErrorCatalogo(motivo);
         var tipos = cn.Query<(int, string)>("SELECT HabitacionTipo, RTRIM(Descripcion) FROM HotelHabitacionTipo", transaction: tx)
             .ToDictionary(t => t.Item1, t => t.Item2);
-        var avisos = ReglasCheckIn.Avisos(lugares, elegidas, libres, t => tipos.TryGetValue(t, out var n) ? n : $"tipo {t}");
         var adelanto = cn.ExecuteScalar<decimal?>(
             "SELECT SUM(Monto) FROM HotelReservaAdelanto WHERE Reserva_id = @reserva AND RTRIM(Estatus) = 'Activa'", new { reserva }, tx) ?? 0;
+
+        // el precio es el del tipo de la habitacion que se da: la linea de la reserva se ajusta (o se separa) antes del
+        // check-in, porque STP_CheckInHabitaciones y la carga de cada noche toman la tarifa de ahi
+        var tipoDe = libres.ToDictionary(x => x.Numero, x => x.Tipo);
+        var precios = cn.Query<(int Tipo, string Categoria, decimal Precio)>(
+                "SELECT HabitacionTipo_id, UPPER(RTRIM(CategoriaPrecio_id)), PrecioHabitacion FROM HotelHabitacionTipoPrecio", transaction: tx)
+            .ToDictionary(p => (p.Tipo, p.Categoria), p => p.Precio);
+        var completas = ConTarifa(cn, tx, lineas, elegidas, n => tipoDe[n], precios);
+        // se le respeta el precio acordado: otro tipo MAS CARO (en la categoria reservada) cobrado con la categoria y la
+        // tarifa reservadas. Protege al cliente; si la habitacion es mas barata, se cobra la mas barata.
+        var avisos = ReglasCheckIn.Avisos(lugares, completas, libres, t => tipos.TryGetValue(t, out var n) ? n : $"tipo {t}",
+            a =>
+            {
+                var l = lineas.First(x => x.Secuencia == a.Secuencia);
+                var cat = (l.CategoriaPrecio_id ?? "A").Trim().ToUpperInvariant();
+                var mayor = !precios.TryGetValue((tipoDe[a.Habitacion], cat), out var nuevo) || nuevo > l.Tarifa;
+                return mayor && a.Tarifa == l.Tarifa && a.Categoria == cat;
+            });
+        var finales = RepartoCheckIn.Repartir(lineas.Select(Original).ToList(), completas, n => tipoDe[n]);
+        var noches = ReglasReserva.Noches(r.FechaEntrada, r.FechaSalida);
+        var filas = new List<(FilaLinea Linea, int Numero)>();
+        foreach (var f in finales)
+        {
+            var l = lineas.First(x => x.Secuencia == f.Secuencia);
+            var secuencia = l.Secuencia;
+            var nombre = tipos.TryGetValue(f.Tipo, out var tn) ? tn : $"tipo {f.Tipo}";
+            var datos = new
+            {
+                reserva, original = l.Secuencia, tipoViejo = l.Habitacion_id, tipo = f.Tipo,
+                nombre = A(nombre.Length > 30 ? nombre[..30] : nombre, 30), cantidad = f.Cantidad, categoria = A(f.Categoria, 1),
+                tarifa = f.Tarifa, importe = Math.Round(f.Cantidad * f.Tarifa * noches, 2),
+            };
+            if (f.Nueva)
+                secuencia = cn.ExecuteScalar<int>("""
+                    INSERT INTO HotelHabitacionReservada (HabitacionReserva_id, Habitacion_id, Habitacion, Cantidad, Adultos, Ninos, Bebes,
+                                                          Credito, Tarifa, Importe, CategoriaPrecio_id, NoHabitacion)
+                    SELECT HabitacionReserva_id, @tipo, @nombre, @cantidad, Adultos, Ninos, Bebes, Credito, @tarifa, @importe, @categoria, 0
+                    FROM HotelHabitacionReservada WHERE HabitacionReserva_id = @reserva AND Secuencia = @original;
+                    SELECT CAST(SCOPE_IDENTITY() AS int);
+                    """, datos, tx);
+            else if (!RepartoCheckIn.SinCambios(f, Original(l)))
+                cn.Execute("""
+                    UPDATE HotelHabitacionReservada
+                    SET Habitacion_id = @tipo, Habitacion = @nombre, Cantidad = @cantidad, CategoriaPrecio_id = @categoria,
+                        Tarifa = @tarifa, Importe = @importe
+                    WHERE HabitacionReserva_id = @reserva AND Secuencia = @original AND Habitacion_id = @tipoViejo
+                    """, datos, tx);
+            var final = new FilaLinea
+            {
+                Secuencia = secuencia, Habitacion_id = f.Tipo, Habitacion = nombre, Cantidad = f.Cantidad, Adultos = l.Adultos,
+                Ninos = l.Ninos, Bebes = l.Bebes, Credito = l.Credito, Tarifa = f.Tarifa, CategoriaPrecio_id = f.Categoria,
+            };
+            filas.AddRange(f.Habitaciones.Select(a => (final, a.Habitacion)));
+        }
 
         // HotelHabitacionReservadaTmp es una sola tabla para todos: solo las filas de ESTA reserva
         cn.Execute("DELETE HotelHabitacionReservadaTmp WHERE HabitacionReserva_id = @reserva", new { reserva }, tx);
         var primera = true;
-        foreach (var a in elegidas.OrderBy(x => x.Secuencia).ThenBy(x => x.Indice))
+        foreach (var (l, numero) in filas)
         {
-            var l = lineas.First(x => x.Secuencia == a.Secuencia);
             // mismas columnas que llena STP_CrearHabitacionesReserva (Importe = la tarifa; el adelanto en la primera)
             cn.Execute("""
                 INSERT INTO HotelHabitacionReservadaTmp (HabitacionReserva_id, Habitacion_id, Secuencia, Habitacion, NOHabitacion, Huesped,
@@ -171,7 +255,7 @@ public sealed class RepositorioCheckIn
                         @adelanto, @categoria, @tarifa, @cantidad)
                 """, new
             {
-                reserva, tipo = l.Habitacion_id, secuencia = l.Secuencia, habitacion = A(l.Habitacion, 40), numero = a.Habitacion,
+                reserva, tipo = l.Habitacion_id, secuencia = l.Secuencia, habitacion = A(l.Habitacion, 40), numero,
                 huesped = A(r.Huesped is { Length: > 50 } h ? h[..50] : r.Huesped, 50), adultos = l.Adultos, ninos = l.Ninos,
                 bebes = l.Bebes, credito = l.Credito, tarifa = l.Tarifa, adelanto = primera ? adelanto : 0m,
                 categoria = A(l.CategoriaPrecio_id, 1), cantidad = l.Cantidad,

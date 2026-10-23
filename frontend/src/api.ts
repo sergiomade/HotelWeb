@@ -91,6 +91,17 @@ export function salir() {
 
 export const obtenerDiagnostico = () => pedir<Diagnostico>('/api/diagnostico')
 
+/** Nombre del hotel (Parametro.NombreEmpresa). No pide sesion. */
+export async function obtenerEmpresa(): Promise<{ nombre: string; rnc: string | null }> {
+  try {
+    const r = await fetch('/api/empresa')
+    if (r.ok) return await r.json()
+  } catch {
+    // sin conexion: el nombre generico
+  }
+  return { nombre: 'Hotel', rnc: null }
+}
+
 // ---- rack de habitaciones ----
 
 export type Situacion = 'Libre' | 'Ocupada' | 'LlegaHoy' | 'Bloqueada'
@@ -507,7 +518,8 @@ export interface PreparacionCheckIn {
   libres: LibreCheckIn[]
 }
 
-export interface Asignacion { secuencia: number; indice: number; habitacion: number }
+/** La habitacion de cada lugar, con la categoria y la tarifa (sin impuestos) que se cobran. */
+export interface Asignacion { secuencia: number; indice: number; habitacion: number; categoria?: string; tarifa?: number }
 
 export type EstadoNoche = 'PorCargar' | 'YaCargada' | 'Transferida' | 'SinTarifa'
 
@@ -534,7 +546,35 @@ export const cargarNoche = (noche: string, sinVencidas: boolean) =>
 
 // ---- cargos a la cuenta de la habitacion ----
 
-export const permisosCuenta = () => pedir<{ anulaCargos: boolean }>('/api/cuentas/permisos')
+export const permisosCuenta = () => pedir<{ anulaCargos: boolean; anulaRecibos: boolean }>('/api/cuentas/permisos')
+
+export interface PagoRecibo {
+  formaPago: number
+  descripcion: string
+  monto: number
+  montoUs: number | null
+  noCheque: string | null
+  fechaCheque?: string | null
+  banco: string | null
+}
+
+export interface ReciboPago {
+  numero: number
+  fecha: string
+  habitacion: number
+  nombre: string
+  concepto: string | null
+  monto: number
+  estatus: string
+  posteado: boolean
+  usuario: string | null
+  pagos: (PagoRecibo & { formaPagoNombre: string })[]
+}
+
+export const recibosDeCuenta = (habitacion: number) => pedir<ReciboPago[]>(`/api/cuentas/${habitacion}/recibos`)
+export const hacerRecibo = (habitacion: number, concepto: string, pagos: PagoRecibo[]) =>
+  pedir<ReciboPago>(`/api/cuentas/${habitacion}/recibos`, { method: 'POST', body: JSON.stringify({ concepto, pagos }) })
+export const anularRecibo = (numero: number) => pedir<ReciboPago>(`/api/recibos/${numero}/anular`, { method: 'POST' })
 export const cargarACuenta = (habitacion: number, servicio: number, descripcion: string, cantidad: number, precio: number) =>
   pedir<CuentaHabitacion>(`/api/cuentas/${habitacion}/cargos`, { method: 'POST', body: JSON.stringify({ servicio, descripcion, cantidad, precio }) })
 export const anularCargo = (habitacion: number, secuencia: number) =>

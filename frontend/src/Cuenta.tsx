@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import Fondo from './Fondo'
+import RecibosCuenta from './RecibosCuenta'
 import {
   anularCargo, cargarACuenta, dinero, fecha, obtenerCuenta, obtenerServicios, permisosCuenta, seAnula, SesionVencida,
   type CuentaHabitacion, type HabitacionRack, type Servicio,
@@ -14,6 +15,8 @@ export default function Cuenta({ habitacion: h, alCerrar, alVencer, alCambiar }:
 }) {
   const [cuenta, setCuenta] = useState<CuentaHabitacion | null>(null)
   const [anula, setAnula] = useState(false)
+  const [anulaRecibos, setAnulaRecibos] = useState(false)
+  const [abierto, setAbierto] = useState<'cargo' | 'pago' | null>(null)
   const [error, setError] = useState('')
   const ocupada = h.situacion === 'Ocupada'
 
@@ -25,7 +28,7 @@ export default function Cuenta({ habitacion: h, alCerrar, alVencer, alCambiar }:
   useEffect(() => {
     if (!ocupada) return
     obtenerCuenta(h.numero).then(setCuenta).catch(manejar)
-    permisosCuenta().then((p) => setAnula(p.anulaCargos)).catch(() => setAnula(false))
+    permisosCuenta().then((p) => { setAnula(p.anulaCargos); setAnulaRecibos(p.anulaRecibos) }).catch(() => setAnula(false))
   }, [h.numero, ocupada, manejar])
 
   useEffect(() => {
@@ -33,6 +36,11 @@ export default function Cuenta({ habitacion: h, alCerrar, alVencer, alCambiar }:
     window.addEventListener('keydown', tecla)
     return () => window.removeEventListener('keydown', tecla)
   }, [alCerrar])
+
+  // despues de un recibo: la cuenta se vuelve a leer (el pago lo pone el procedimiento de Delphi)
+  function recargar() {
+    obtenerCuenta(h.numero).then(actualizada).catch(manejar)
+  }
 
   function actualizada(c: CuentaHabitacion) {
     setCuenta(c)
@@ -65,7 +73,23 @@ export default function Cuenta({ habitacion: h, alCerrar, alVencer, alCambiar }:
         {ocupada && !cuenta && !error && <p className="tenue">Cargando la cuenta...</p>}
         {cuenta && (
           <>
-            {!cuenta.transferida && <AgregarCargo habitacion={h.numero} alCargar={actualizada} alError={manejar} />}
+            {!cuenta.transferida && (
+              <div className="acciones-cuenta">
+                {/* los dos botones uno al lado del otro; el formulario que se abra va debajo */}
+                {!abierto && (
+                  <div className="barra-cuenta">
+                    <button type="button" className="boton-cargo" onClick={() => setAbierto('cargo')}>Agregar cargo</button>
+                    <button type="button" className="boton-pago" onClick={() => setAbierto('pago')}>Registrar pago</button>
+                  </div>
+                )}
+                {abierto === 'cargo' && (
+                  <AgregarCargo habitacion={h.numero} alCargar={(c) => { actualizada(c); setAbierto(null) }}
+                                alCerrar={() => setAbierto(null)} alError={manejar} />
+                )}
+                <RecibosCuenta habitacion={h.numero} saldo={cuenta.saldo} anula={anulaRecibos} abierto={abierto === 'pago'}
+                               alCerrar={() => setAbierto(null)} alCambiar={recargar} alError={manejar} />
+              </div>
+            )}
             <Detalle c={cuenta} credito={h.credito} anula={anula} alAnular={anular} />
           </>
         )}
@@ -91,12 +115,12 @@ function Libre({ h }: { h: HabitacionRack }) {
 const DEL_SISTEMA = new Set([3, 7, 11])
 
 /** Agregar un servicio a la cuenta, como el boton de cargos de Delphi. */
-function AgregarCargo({ habitacion, alCargar, alError }: {
+function AgregarCargo({ habitacion, alCargar, alCerrar, alError }: {
   habitacion: number
   alCargar: (c: CuentaHabitacion) => void
+  alCerrar: () => void
   alError: (e: unknown) => void
 }) {
-  const [abierto, setAbierto] = useState(false)
   const [servicios, setServicios] = useState<Servicio[]>([])
   const [servicio, setServicio] = useState(0)
   const [descripcion, setDescripcion] = useState('')
@@ -106,9 +130,9 @@ function AgregarCargo({ habitacion, alCargar, alError }: {
   const [enviando, setEnviando] = useState(false)
 
   useEffect(() => {
-    if (!abierto || servicios.length > 0) return
+    if (servicios.length > 0) return
     obtenerServicios().then((r) => setServicios(r.servicios.filter((s) => !DEL_SISTEMA.has(s.id)))).catch(alError)
-  }, [abierto, servicios.length, alError])
+  }, [servicios.length, alError])
 
   function elegir(id: number) {
     setServicio(id)
@@ -136,7 +160,6 @@ function AgregarCargo({ habitacion, alCargar, alError }: {
       setDescripcion('')
       setCantidad('1')
       setPrecio('')
-      setAbierto(false)
     } catch (e) {
       if (e instanceof SesionVencida) alError(e)
       else setError(e instanceof Error ? e.message : String(e))
@@ -144,8 +167,6 @@ function AgregarCargo({ habitacion, alCargar, alError }: {
       setEnviando(false)
     }
   }
-
-  if (!abierto) return <p><button type="button" onClick={() => setAbierto(true)}>Agregar cargo</button></p>
 
   return (
     <form className="grupo-cargo" onSubmit={enviar}>
@@ -164,7 +185,7 @@ function AgregarCargo({ habitacion, alCargar, alError }: {
       <p className="tenue">El ITBIS y la propina se suman según el cliente, como los demás cargos.</p>
       {error && <p className="error" role="alert">{error}</p>}
       <div className="botones">
-        <button type="button" className="secundario" onClick={() => setAbierto(false)}>Cancelar</button>
+        <button type="button" className="secundario" onClick={alCerrar}>Cancelar</button>
         <button type="submit" disabled={enviando || !servicio || cant < 1 || prec <= 0 || !descripcion.trim()}>
           {enviando ? 'Cargando...' : 'Cargar'}
         </button>
