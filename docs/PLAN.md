@@ -373,3 +373,11 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
     faltan Diagnostico/Ambiente y Certificado/Estado|Cargar, que HotelWeb no usa). Para HotelWeb no hay que actualizar
     nada en la nube: basta Parametro.UrlApiEcf/ClaveApiEcf de la base real. El paquete C:\Publish_WebEncf_Azure (probado)
     queda como actualizacion opcional de esa API; el sitio de Azure es de otra empresa.
+13. Probado con la API de la nube (2026-10-23): HotelWeb sobre HotelPruebas (db_aa9d01_hotelpruebas, conexion de
+    conexiones.ini solo mientras dura la prueba: scratchpad hotelweb_con_hotelpruebas.ps1) y su Parametro ->
+    https://132028211.net (testecf, misma base comun y ambiente que la local: confirmado comparando DocumentosXml).
+    E320000007019 (RFCE, factura 13515) y E310000005009 (13516) ACEPTADAS, con QR. Esa API lee el XML de FacturaXml de
+    HotelPruebas. Bug corregido: el QR (Timbre) consultaba DocumentosXml SIN la X-Api-Key (la local no la pide): salia
+    sin QR; y un 401 de la API ahora dice "revise Parametro.ClaveApiEcf" en vez de "no llego".
+14. Desde 2026-10-23 (decision del usuario) el desarrollo y las pruebas van EN LA NUBE: HotelPruebas + https://132028211.net
+    (testecf). La API local 8005 se apaga; Hotel_new queda de respaldo.

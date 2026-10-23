@@ -365,12 +365,13 @@ public sealed class ServicioEcf
     /// <summary>El QR (consultatimbre / consultatimbrefc, como uQrDgii.UrlConsultaTimbre) con el registro del e-CF completo.</summary>
     public async Task<TimbreEcf> Timbre(FacturaEcf f, string rncEmisor)
     {
-        string? url;
-        using (var cn = _conexiones.Hotel()) url = Parametro(cn).UrlApiEcf;
-        if (string.IsNullOrWhiteSpace(url)) return new TimbreEcf(null, null, null);
+        FilaParametro p;
+        using (var cn = _conexiones.Hotel()) p = Parametro(cn);
+        if (string.IsNullOrWhiteSpace(p.UrlApiEcf)) return new TimbreEcf(null, null, null);
         try
         {
-            var doc = await Documento(Cliente(new FilaParametro { UrlApiEcf = url }), f, "ECF");
+            // con la clave (X-Api-Key): la API de la nube la pide en todo; la local no, y por eso no se vio antes
+            var doc = await Documento(Cliente(p), f, "ECF");
             if (doc is null) return new TimbreEcf(null, null, null);
             var codigo = Texto(doc.Value, "codigoSeguridad");
             var firma = Texto(doc.Value, "fechaHoraFirma");
@@ -541,6 +542,10 @@ public sealed class ServicioEcf
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(segundos));
         using var r = get ? await api.GetAsync(ruta.TrimStart('/'), cts.Token)
                           : await api.PostAsync(ruta.TrimStart('/'), new StringContent(""), cts.Token);
+        // la API de la nube pide la clave (X-Api-Key, Parametro.ClaveApiEcf): sin ella todo da 401 y antes se veia como
+        // "no llego a la DGII" o un ticket sin QR
+        if (r.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+            throw new HttpRequestException("La API e-CF no acepto la clave: revise Parametro.ClaveApiEcf (X-Api-Key).");
         var texto = await r.Content.ReadAsStringAsync(cts.Token);
         if (string.IsNullOrWhiteSpace(texto)) return default;
         try { return JsonDocument.Parse(texto).RootElement.Clone(); }
