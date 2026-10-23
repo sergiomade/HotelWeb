@@ -209,9 +209,68 @@ public sealed class ServicioEcf
                $"&fechaemision={f.Fecha:dd-MM-yyyy}&montototal={monto}&fechafirma={U(fechaFirma)}&codigoseguridad={U(codigo)}";
     }
 
-    private async Task<EstadoEcf> Resultado(HttpClient api, FacturaEcf f, long numero, string tipo, string? mensajeEnvio)
+    /// <summary>
+    /// El estado en la DGII de varias facturas cerradas (la lista de facturas): DocumentosXml se pide UNA vez por tipo
+    /// para todo el rango, y los ECF con trackId se consultan de a 4. Las que no tienen e-NCF no van en el resultado.
+    /// </summary>
+    public async Task<Dictionary<long, EstadoEcf>> Estados(IReadOnlyList<FacturaEcf> facturas)
     {
-        var doc = await Documento(api, f, tipo);
+        var r = new Dictionary<long, EstadoEcf>();
+        var conEcf = facturas.Where(f => f.Encf.Length == 13 && f.Encf[0] == 'E').ToList();
+        if (conEcf.Count == 0) return r;
+        string? url;
+        string? clave;
+        using (var cn = _conexiones.Hotel())
+        {
+            var p = Parametro(cn);
+            url = p.UrlApiEcf;
+            clave = p.ClaveApiEcf;
+        }
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            foreach (var f in conEcf) r[f.Factura] = new EstadoEcf(f.Encf, f.Factura, "Sin enviar", "Falta Parametro.UrlApiEcf.", false);
+            return r;
+        }
+        var api = Cliente(new FilaParametro { UrlApiEcf = url, ClaveApiEcf = clave });
+        var desde = conEcf.Min(f => f.Fecha).AddDays(-1);
+        try
+        {
+            var docs = new Dictionary<string, List<JsonElement>>();
+            foreach (var tipo in new[] { "ECF", "RFCE" })
+            {
+                var lista = await Llamar(api, $"/DgiiECfs/DocumentosXml?tipoDocumento={tipo}&desde={desde:yyyy-MM-dd}&hasta={DateTime.Today.AddDays(1):yyyy-MM-dd}", 30, get: true);
+                docs[tipo] = lista.ValueKind == JsonValueKind.Array ? lista.EnumerateArray().ToList() : new List<JsonElement>();
+            }
+            using var turnos = new SemaphoreSlim(4);
+            var tareas = conEcf.Select(async f =>
+            {
+                await turnos.WaitAsync();
+                try
+                {
+                    var doc = docs[EcfHotel.EsResumen(f) ? "RFCE" : "ECF"].Where(x => Texto(x, "encf") == f.Encf)
+                        .OrderByDescending(x => x.TryGetProperty("id", out var id) ? id.GetInt64() : 0).Cast<JsonElement?>().FirstOrDefault();
+                    return await DeDocumento(api, f, f.Factura, doc, null);
+                }
+                catch (Exception e) when (e is HttpRequestException or TaskCanceledException or JsonException)
+                {
+                    return new EstadoEcf(f.Encf, f.Factura, "Desconocido", e.Message, false);
+                }
+                finally { turnos.Release(); }
+            });
+            foreach (var e in await Task.WhenAll(tareas)) r[e.Factura] = e;
+        }
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+        {
+            foreach (var f in conEcf) r[f.Factura] = new EstadoEcf(f.Encf, f.Factura, "Desconocido", $"No hubo conexion con la API: {e.Message}", false);
+        }
+        return r;
+    }
+
+    private async Task<EstadoEcf> Resultado(HttpClient api, FacturaEcf f, long numero, string tipo, string? mensajeEnvio) =>
+        await DeDocumento(api, f, numero, await Documento(api, f, tipo), mensajeEnvio);
+
+    private async Task<EstadoEcf> DeDocumento(HttpClient api, FacturaEcf f, long numero, JsonElement? doc, string? mensajeEnvio)
+    {
         if (doc is null) return new EstadoEcf(f.Encf, numero, "Sin enviar", mensajeEnvio ?? "No llego a la DGII.", false);
         var d = doc.Value;
         if (Texto(d, "estado") != "Enviado")

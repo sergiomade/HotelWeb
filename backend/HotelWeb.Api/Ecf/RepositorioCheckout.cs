@@ -15,6 +15,10 @@ public sealed record PreparacionCheckout(int Habitacion, long Factura, string? C
 
 public sealed record ResultadoCheckout(long Numero, string? Encf, decimal Total, bool Transferida);
 
+/// <summary>Una factura cerrada en la lista, con su estado en la DGII (null si no lleva e-NCF).</summary>
+public sealed record FacturaCerrada(long Numero, DateTime Fecha, int Habitacion, string? Cliente, string? Huesped, string? Encf,
+    decimal Total, bool Transferida, EstadoEcf? Dgii);
+
 public sealed record LineaImpresa(DateTime? Fecha, string Descripcion, decimal Cantidad, decimal Precio, decimal Importe);
 
 public sealed record FacturaImpresa(long Numero, string? Encf, string TipoNombre, DateTime Fecha, DateTime? Vencimiento,
@@ -136,6 +140,41 @@ public sealed class RepositorioCheckout
             throw new ErrorCatalogo("No se pudo realizar el check-out: verifique el balance de la factura. No se hizo nada.");
         tx.Commit();
         return new ResultadoCheckout((long)numero.Value, encf, total, transferida);
+    }
+
+    /// <summary>
+    /// Las facturas cerradas (HotelTmpFactura) de un rango de fechas, las mas nuevas primero, con su estado en la DGII.
+    /// Texto: numero de habitacion, de factura, e-NCF o parte del nombre.
+    /// </summary>
+    public async Task<IReadOnlyList<FacturaCerrada>> Facturas(DateTime desde, DateTime hasta, string? texto, ServicioEcf ecf)
+    {
+        if (hasta.Date < desde.Date) throw new ErrorCatalogo("La fecha final es antes de la inicial.");
+        if ((hasta.Date - desde.Date).TotalDays > 62) throw new ErrorCatalogo("Escoja a lo sumo dos meses.");
+        var t = string.IsNullOrWhiteSpace(texto) ? null : texto.Trim();
+        List<(FacturaCerrada F, FacturaEcf E)> filas;
+        using (var cn = _conexiones.Hotel())
+        {
+            filas = cn.Query<(decimal Numero, DateTime Fecha, decimal Hab, string? Cliente, string? Huesped, string? Ncf, string? Rnc,
+                    decimal? SubTotal, decimal? Itbis, decimal? Propina, bool? Transferida)>("""
+                SELECT TOP 500 f.Factura_id, f.Fecha, f.Habitacion_id, RTRIM(c.Nombre), RTRIM(f.Huesped), RTRIM(f.NCF), RTRIM(f.RNC),
+                       f.SubTotal, f.Itbis, f.Propina, f.Transferida
+                FROM HotelTmpFactura f WITH (NOLOCK) LEFT JOIN CxcCliente c WITH (NOLOCK) ON c.NumeroCliente = f.Cliente_id
+                WHERE f.Fecha >= @desde AND f.Fecha < @hasta
+                  AND (@t IS NULL OR RTRIM(f.NCF) = @t OR CAST(f.Habitacion_id AS varchar(20)) = @t OR CAST(f.Factura_id AS varchar(20)) = @t
+                       OR c.Nombre LIKE '%' + @t + '%' OR f.Huesped LIKE '%' + @t + '%')
+                ORDER BY f.Factura_id DESC
+                """, new { desde = desde.Date, hasta = hasta.Date.AddDays(1), t = A(t, 60) })
+                .Select(x =>
+                {
+                    var subtotal = x.SubTotal ?? 0;
+                    var e = new FacturaEcf(x.Ncf ?? "", (long)x.Numero, x.Fecha.Date, x.Rnc, x.Cliente, subtotal, x.Itbis ?? 0, x.Propina ?? 0,
+                        false, Array.Empty<ItemEcf>());
+                    return (new FacturaCerrada((long)x.Numero, x.Fecha, (int)x.Hab, x.Cliente, x.Huesped, x.Ncf, e.Total,
+                        x.Transferida == true, null), e);
+                }).ToList();
+        }
+        var estados = await ecf.Estados(filas.Where(x => !x.F.Transferida).Select(x => x.E).ToList());
+        return filas.Select(x => x.F with { Dgii = estados.TryGetValue(x.F.Numero, out var s) ? s : null }).ToList();
     }
 
     /// <summary>La factura cerrada para imprimir (carta, como Delphi) con el QR.</summary>

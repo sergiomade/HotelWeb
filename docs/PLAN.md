@@ -200,3 +200,6 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   secuencia por TIPO (ComprobanteFiscal.FechaVencimientoEncf; Delphi toma siempre la del E31) e impreso en todos los
   tipos, E32 incluida (en el XML de la E32 no va). Espera a pantalla completa mientras se habla con la DGII.
 - Falta de la etapa 5: lista de facturas cerradas con su estado en la DGII (reimprimir, reenviar).
+- Etapa 5, parte 2 HECHA (2026-10-23): Recepcion > Facturas (`GET /api/facturas?desde&hasta&texto`): facturas cerradas
+  con su estado en la DGII (DocumentosXml una vez por tipo para el rango; ECF con trackId de a 4), imprimir y reenviar.
+  ETAPA 5 COMPLETA. Siguiente: etapa 6 (walk-in).

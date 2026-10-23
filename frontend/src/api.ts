@@ -738,3 +738,19 @@ export const hacerCheckout = (habitacion: number, tipo: number, rnc: string) =>
 export const estadoDgii = (numero: number) => pedir<EstadoEcf>(`/api/facturas/${numero}/dgii`)
 export const reenviarEcf = (numero: number) => pedir<EstadoEcf>(`/api/facturas/${numero}/enviar`, { method: 'POST' })
 export const obtenerFacturaImpresa = (numero: number) => pedir<FacturaImpresa>(`/api/facturas/${numero}`)
+
+export interface FacturaCerrada {
+  numero: number
+  fecha: string
+  habitacion: number
+  cliente: string | null
+  huesped: string | null
+  encf: string | null
+  total: number
+  transferida: boolean
+  /** null: sin e-NCF (transferida o vieja) */
+  dgii: EstadoEcf | null
+}
+
+export const listarFacturas = (desde: string, hasta: string, texto: string) =>
+  pedir<FacturaCerrada[]>(`/api/facturas?desde=${desde}&hasta=${hasta}&texto=${encodeURIComponent(texto)}`)
