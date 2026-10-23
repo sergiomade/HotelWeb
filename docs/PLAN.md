@@ -309,3 +309,9 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   (por llegada o por salida, como Stp_ProyecciondeReservaciones, con el resumen por dia; usa `/api/reservas`) y el
   maestro de clientes (`/api/reportes/clientes`: buscar, solo con RNC, solo con credito, con los inactivos; hasta 2000).
   UrptMaestroClientes de Delphi no esta en ningun menu.
+- 9d, decisiones del usuario (2026-10-23): E43, E41 y cambiar las secuencias SOLO los usuarios de
+  Permisos:ComprobantesEspeciales (si no esta, la lista de catalogos; Delphi pedia usuario y clave otra vez); los gastos
+  y compras pagados en efectivo RESTAN en el cuadre del cajero que los hizo (Delphi no los cuenta).
+- Parte 9d-1 HECHA (2026-10-23, sin commit): Catalogos > Secuencias e-CF (`/api/secuencias`): por tipo, autorizacion,
+  desde-hasta, ultima usada, quedan, vence y estado (Stp_EstadoSecuenciasEcf); cambiar con Stp_GuardarAutorizacionEcf.
+  Aviso al entrar (una vez por sesion, como MostrarAvisosSecuenciasEcf) de los tipos que se usan y no estan OK.

@@ -1094,3 +1094,19 @@ export interface ClienteReporte {
 
 export const reporteClientes = (texto: string, conRnc: boolean, conCredito: boolean, inactivos: boolean) =>
   pedir<ClienteReporte[]>(`/api/reportes/clientes?texto=${encodeURIComponent(texto)}&conRnc=${conRnc}&conCredito=${conCredito}&inactivos=${inactivos}`)
+
+// ---- etapa 9d: secuencias e-CF autorizadas ----
+
+export interface SecuenciaEcf {
+  codigo: string; descripcion: string; autorizacion: string | null; fechaAutorizacion: string | null; desde: number | null; hasta: number | null
+  vence: string | null; ultima: number; siguiente: number; restantes: number; dias: number | null
+  /** OK, POR AGOTARSE, POR VENCER, AGOTADA, VENCIDA, SIN AUTORIZACION o NO SE USA */
+  estado: string
+}
+
+export interface PantallaSecuencias { secuencias: SecuenciaEcf[]; puedeEditar: boolean; avisoRestantes: number; avisoDias: number }
+
+export const obtenerSecuencias = () => pedir<PantallaSecuencias>('/api/secuencias')
+export const avisosSecuencias = () => pedir<SecuenciaEcf[]>('/api/secuencias/avisos')
+export const guardarSecuencia = (codigo: string, d: { autorizacion: string; fechaAutorizacion: string; desde: number; hasta: number; vence: string }) =>
+  pedir<{ mensaje: string }>(`/api/secuencias/${codigo}`, { method: 'PUT', body: JSON.stringify(d) })

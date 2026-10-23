@@ -7,6 +7,7 @@ namespace HotelWeb.Api.Seguridad;
 /// No toca la base Seguridad, que comparten otros programas.
 /// - Permisos:EditanCatalogos: precios, habitaciones, tipos, servicios y clientes.
 /// - Permisos:AnulanAdelantos: anular un adelanto de reserva (si no esta, la misma de catalogos).
+/// - Permisos:ComprobantesEspeciales: gastos menores (E43), compras a informales (E41) y secuencias e-CF.
 /// Reservas y adelantos los registra cualquier usuario, como en Delphi.
 /// </summary>
 public sealed class PermisosWeb
@@ -15,6 +16,7 @@ public sealed class PermisosWeb
     private readonly HashSet<int> _anulanAdelantos;
     private readonly HashSet<int> _anulanCargos;
     private readonly HashSet<int> _anulanRecibos;
+    private readonly HashSet<int> _comprobantesEspeciales;
 
     public PermisosWeb(IConfiguration config)
     {
@@ -22,7 +24,14 @@ public sealed class PermisosWeb
         _anulanAdelantos = ListaO(config, "Permisos:AnulanAdelantos", _editanCatalogos);
         _anulanCargos = ListaO(config, "Permisos:AnulanCargos", _editanCatalogos);
         _anulanRecibos = ListaO(config, "Permisos:AnulanRecibos", _editanCatalogos);
+        _comprobantesEspeciales = ListaO(config, "Permisos:ComprobantesEspeciales", _editanCatalogos);
     }
+
+    /// <summary>
+    /// Gastos menores (E43), compras a informales (E41) y las secuencias e-CF autorizadas (Permisos:ComprobantesEspeciales,
+    /// o la de catalogos). Delphi pedia usuario y clave otra vez; decision del usuario (2026-10-23): solo una lista corta.
+    /// </summary>
+    public bool ComprobantesEspeciales(int usuarioId) => _comprobantesEspeciales.Contains(usuarioId);
 
     /// <summary>Anular un recibo de pago antes del cuadre (Permisos:AnulanRecibos, o la de catalogos).</summary>
     public bool AnulaRecibos(int usuarioId) => _anulanRecibos.Contains(usuarioId);

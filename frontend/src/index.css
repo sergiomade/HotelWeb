@@ -516,3 +516,10 @@ button.chico { padding: 0.15em 0.6em; font-size: 0.85em; }
   .reportes .tabla-marco { overflow: visible; }
   .tabla.reporte td, .tabla.reporte th { font-size: 9px; padding: 2px 4px; }
 }
+
+/* ---- avisos de secuencias e-CF (etapa 9d) ---- */
+.aviso-secuencias {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 16px; background: var(--llega-fondo); border-bottom: 1px solid var(--llega-borde); color: var(--texto);
+}
+.aviso-secuencias .botones { display: flex; gap: 6px; margin: 0; }
