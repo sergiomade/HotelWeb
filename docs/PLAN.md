@@ -295,3 +295,11 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   sale del efectivo; credito y notas de credito no son dinero; dolares aparte en US$. Cafeteria: lo que el usuario cobro
   (faFacturaPago) que no esta en un cierre, desde su primer cierre (o desde hoy). Si entra un cobro mientras cuenta, no
   cierra. Probado en Hotel_new: cierres 1 (cafeteria) y 2 (hotel, faltan 100 con comentario).
+- Parte 9b HECHA (2026-10-23, sin commit): menu Reportes (`/api/reportes/...`), cada uno con imprimir (carta apaisada) y
+  Excel (CSV): ventas del hotel (check-out y walk-in; las transferidas no suman), ventas de la cafeteria (alimentos,
+  bebidas y otros por InvArticulo.TipoArticulo_id, formas de pago, a la habitacion), comprobantes del periodo (los tres
+  origenes y las notas E34 con el desglose de la E34 enviada, estado de EcfEstadoDgii, resumen por tipo; las notas
+  restan) y canceladas sin cobro (Stp_FacturasCanceladasHotel). Rango maximo 3 meses.
+  Hallazgo: en la cafeteria de Delphi 1,489 de 1,508 pagos con tarjeta (desde 2025-06) son MAYORES que el total, casi
+  siempre por centavos y a veces por tarjeta mal digitada (factura 10595: 2,355,623 por 3,750); sus reportes los toman
+  como "propina voluntaria" y el cambio de turno los suma. La web ya no lo permite (8b) y el reporte marca esas facturas.

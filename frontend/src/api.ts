@@ -1062,3 +1062,25 @@ export const cierresCaja = (ambito: AmbitoCaja) => pedir<CierreResumen[]>(`/api/
 export const cerrarCaja = (ambito: AmbitoCaja, d: { efectivo: number; dolares: number; comentario: string; movimientos: number; ingresos: number }) =>
   pedir<CierreResumen>(`/api/caja/${ambito}/cerrar`, { method: 'POST', body: JSON.stringify(d) })
 export const cierreImpreso = (cierre: number) => pedir<CierreImpreso>(`/api/caja/cierres/${cierre}`)
+
+// ---- etapa 9b: reportes de ventas y comprobantes ----
+
+export interface VentaHotel { origen: string; numero: number; fecha: string; habitacion: string | null; cliente: string | null; encf: string | null; subTotal: number; itbis: number; propina: number; total: number; transferida: boolean }
+
+export interface VentaCafeteria {
+  numero: number; fecha: string; mesa: number; cliente: string | null; encf: string | null; alimentos: number; bebidas: number; otros: number
+  subTotal: number; itbis: number; propina: number; total: number; efectivo: number; tarjeta: number; credito: number; habitacion: number
+  exceso: number; habitacionId: number | null
+}
+
+export interface Comprobante { origen: string; numero: number; fecha: string; tipo: string; ncf: string; rnc: string | null; cliente: string | null; base: number; itbis: number; propina: number; total: number; modifica: string | null; estado: string | null }
+
+export interface ReporteComprobantes { lista: Comprobante[]; porTipo: { tipo: string; cantidad: number; base: number; itbis: number; propina: number; total: number }[] }
+
+export interface FacturaCancelada { cancelacion: number; fechaCancelacion: string; factura: number; habitacion: number | null; cliente: string | null; cargos: number; autoriza: string | null; usuario: string | null; motivo: string | null }
+
+const rango = (desde: string, hasta: string) => `desde=${desde}&hasta=${hasta}`
+export const reporteVentasHotel = (desde: string, hasta: string) => pedir<VentaHotel[]>(`/api/reportes/ventas-hotel?${rango(desde, hasta)}`)
+export const reporteVentasCafeteria = (desde: string, hasta: string) => pedir<VentaCafeteria[]>(`/api/reportes/ventas-cafeteria?${rango(desde, hasta)}`)
+export const reporteComprobantes = (desde: string, hasta: string) => pedir<ReporteComprobantes>(`/api/reportes/comprobantes?${rango(desde, hasta)}`)
+export const reporteCanceladas = (desde: string, hasta: string) => pedir<FacturaCancelada[]>(`/api/reportes/canceladas?${rango(desde, hasta)}`)

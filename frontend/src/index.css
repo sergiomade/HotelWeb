@@ -500,3 +500,19 @@ button.chico { padding: 0.15em 0.6em; font-size: 0.85em; }
 @media (max-width: 860px) { .caja-cuerpo { grid-template-columns: 1fr; } }
 .firmas { display: flex; justify-content: space-around; gap: 40px; margin-top: 60px; }
 .firmas div { flex: 1; max-width: 260px; text-align: center; border-top: 1px solid #000; padding-top: 4px; }
+
+/* ---- reportes (etapa 9b) ---- */
+.reporte-cabeza { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin: 6px 0; }
+.reporte-cabeza h3 { margin: 0; }
+.reporte-cabeza .botones { margin: 0; }
+.tabla.reporte td, .tabla.reporte th { white-space: nowrap; font-size: 0.85rem; padding: 4px 8px; }
+.tabla.reporte tfoot td { border-top: 2px solid var(--borde); }
+.tabla.reporte tr.fila-alerta td { background: color-mix(in srgb, var(--llega-fondo) 60%, transparent); }
+.reporte-resumen { width: auto; margin: 6px 0 12px; }
+@media print {
+  .reportes { page: apaisado; }
+  @page apaisado { size: letter landscape; margin: 0.4in; }
+  .barra { display: none; }
+  .reportes .tabla-marco { overflow: visible; }
+  .tabla.reporte td, .tabla.reporte th { font-size: 9px; padding: 2px 4px; }
+}
