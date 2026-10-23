@@ -9,12 +9,16 @@ public sealed record EmisorEcf(string Rnc, string RazonSocial, string Direccion,
 /// <summary>Una linea del e-CF: las de la cuenta activas y positivas, sin los PAY-OUT.</summary>
 public sealed record ItemEcf(string Descripcion, decimal Cantidad, decimal Precio, decimal Importe);
 
-/// <summary>La factura cerrada (HotelTmpFactura) con lo que lleva el e-CF.</summary>
+/// <summary>La factura cerrada (HotelTmpFactura, FaTmpFactura...) con lo que lleva el e-CF.</summary>
+/// <param name="TotalCobrado">
+/// El total grabado cuando no es la suma: la cafeteria trunca ITBIS y propina pero saca el total de los montos sin truncar
+/// (609.38 -> 109.68 + 60.93 y total 780.00). Delphi manda ese total y la DGII lo acepta (E310000000233).
+/// </param>
 public sealed record FacturaEcf(string Encf, long Factura, DateTime Fecha, string? Rnc, string? NombreCliente, decimal SubTotal,
-    decimal Itbis, decimal Propina, bool Credito, IReadOnlyList<ItemEcf> Items)
+    decimal Itbis, decimal Propina, bool Credito, IReadOnlyList<ItemEcf> Items, decimal? TotalCobrado = null)
 {
     public string Tipo => Encf.Length >= 3 ? Encf.Substring(1, 2) : "";
-    public decimal Total => SubTotal + Itbis + Propina;
+    public decimal Total => TotalCobrado ?? SubTotal + Itbis + Propina;
 }
 
 public sealed class ErrorEcf(string mensaje) : Exception(mensaje);

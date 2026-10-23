@@ -82,3 +82,31 @@ public class EcfHotelTests
         Assert.NotNull(EcfHotel.Validar(F9653(encf: "B0200000001")));
     }
 }
+
+public class EcfCafeteriaTests
+{
+    private static readonly EmisorEcf Caobas = new("122006044", "HOTEL LAS CAOBAS, SRL", "C/ Luis Enrique Carrón Esq. Av. S.Diego", "809-290-5858");
+
+    private static string Delphi(string archivo) => File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Datos", archivo)).TrimEnd();
+
+    [Fact]
+    public void E31_de_la_cafeteria_igual_a_la_de_Delphi_aceptada()
+    {
+        // FaTmpFactura 12790 (E310000000233): el total es 780.00 aunque 609.38 + 109.68 + 60.93 = 779.99
+        var f = new FacturaEcf("E310000000233", 12790, new DateTime(2026, 10, 3), "132493931", "FERRECOMERCIAL MADE ALCANTARA, SRL",
+            609.38m, 109.68m, 60.93m, false, [new ItemEcf("Filete en Salsa de Hongos", 1, 609.38m, 609.38m)], 780.00m);
+        var web = EcfHotel.Ecf(f, Caobas, new DateTime(2028, 12, 31), new DateTime(2026, 10, 3, 18, 13, 7)).TrimEnd();
+        Assert.Equal(Delphi("E310000000233.xml"), web);
+    }
+
+    [Fact]
+    public void E32_de_consumo_y_su_resumen_iguales_a_los_de_Delphi()
+    {
+        // FaTmpFactura 12788 (E320000006062), cliente de contado (RNC en ceros): ECF completo y RFCE con su codigo
+        var f = new FacturaEcf("E320000006062", 12788, new DateTime(2026, 10, 3), "00000000000", "CLIENTE DE CONTADO",
+            124.99m, 22.49m, 12.49m, false, [new ItemEcf("Jamon", 1, 54.68m, 54.68m), new ItemEcf("JUGO", 1, 70.31m, 70.31m)], 159.98m);
+        Assert.True(EcfHotel.EsResumen(f));
+        Assert.Equal(Delphi("E320000006062.xml"), EcfHotel.Ecf(f, Caobas, new DateTime(2028, 12, 31), new DateTime(2026, 10, 3, 12, 1, 1)).TrimEnd());
+        Assert.Equal(Delphi("E320000006062_rfce.xml"), EcfHotel.Rfce(f, Caobas, "PZW42A").TrimEnd());
+    }
+}

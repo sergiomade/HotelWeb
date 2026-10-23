@@ -27,7 +27,7 @@ public sealed record PreCuentaImpresa(EmisorEcf Emisor, CuentaMesa Cuenta, DateT
 /// FaFactura (EstatusFactura_id 1) y FaFacturaDetalle. Cada cambio vuelve a totalizar el encabezado, como
 /// CalcularTotales + Salvar. Todo bajo un candado (sp_getapplock) para que dos cajas no se pisen.
 /// </summary>
-public sealed class RepositorioCafeteria
+public sealed partial class RepositorioCafeteria
 {
     private const string Candado = "HotelWeb_Cafeteria";
     private const int Abierta = 1;

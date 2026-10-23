@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<RFCE>
+  <Encabezado>
+    <Version>1.0</Version>
+    <IdDoc>
+      <TipoeCF>32</TipoeCF>
+      <eNCF>E320000006062</eNCF>
+      <TipoIngresos>01</TipoIngresos>
+      <TipoPago>1</TipoPago>
+    </IdDoc>
+    <Emisor>
+      <RNCEmisor>122006044</RNCEmisor>
+      <RazonSocialEmisor>HOTEL LAS CAOBAS, SRL</RazonSocialEmisor>
+      <FechaEmision>03-10-2026</FechaEmision>
+    </Emisor>
+    <Totales>
+      <MontoGravadoTotal>124.99</MontoGravadoTotal>
+      <MontoGravadoI1>124.99</MontoGravadoI1>
+      <TotalITBIS>22.49</TotalITBIS>
+      <TotalITBIS1>22.49</TotalITBIS1>
+      <MontoImpuestoAdicional>12.49</MontoImpuestoAdicional>
+      <ImpuestosAdicionales>
+        <ImpuestoAdicional>
+          <TipoImpuesto>001</TipoImpuesto>
+          <OtrosImpuestosAdicionales>12.49</OtrosImpuestosAdicionales>
+        </ImpuestoAdicional>
+      </ImpuestosAdicionales>
+      <MontoTotal>159.98</MontoTotal>
+    </Totales>
+    <CodigoSeguridadeCF>PZW42A</CodigoSeguridadeCF>
+  </Encabezado>
+</RFCE>

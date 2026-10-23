@@ -255,3 +255,11 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   y mover de mesa (libre: cambia Mesa_id; ocupada: une y cierra la vieja como Stp_TransferirMesas). Totales como Delphi:
   ITBIS y propina truncados y el total de los montos sin truncar (609.38 -> 780.00). Fecha: la del dia al abrir (al
   cobrar se pondra la del cobro). Probado en Hotel_new: cuentas 12792 (movida y unida) y 12793 (mesa 42, queda abierta).
+- Parte 8b HECHA (2026-10-23, sin commit): Cobrar en la cuenta de la mesa (`POST /api/cafeteria/mesas/{m}/cobrar`,
+  ticket `/cafeteria/{factura}`, `/api/cafeteria/facturas/{f}/dgii|enviar`). Una transaccion: cliente (contado o de CxC)
+  y totales, e-NCF con todo validado antes, faFacturaPago con lo APLICADO (la devuelta en FaFactura.Cambio; el cambio de
+  turno de Delphi suma MontoPago), STP_PasarACXC, Stp_TransferirCerrarFactura; despues el envio. Decision: credito solo
+  a un cliente de CxC y por lo que falta (Delphi lo cargaba al cliente 1 y por mas). E44 sin ITBIS. Fecha = la del cobro.
+  EstatusFactura_id queda en 1 en FaTmpFactura, como Delphi. El e-CF lleva el TOTAL grabado (FacturaEcf.TotalCobrado):
+  XML igual byte a byte a E310000000233 y E320000006062 (+RFCE). Probado en testecf: E310000000239 (12795, tarjeta +
+  efectivo con devuelta), E310000000240 (12796, credito a BANCO BHD 2027) y E320000006073 (12793, RFCE) ACEPTADAS.

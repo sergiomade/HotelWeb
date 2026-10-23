@@ -954,3 +954,47 @@ export const preCuentaMesa = (mesa: number) => pedir<PreCuentaImpresa>(`${CAFE}/
 export const preCuentaImpresa = (factura: number) => pedir<PreCuentaImpresa>(`${CAFE}/cuentas/${factura}/precuenta`)
 export const moverMesa = (mesa: number, destino: number) =>
   pedir<CuentaMesa>(`${CAFE}/mesas/${mesa}/mover`, { method: 'POST', body: JSON.stringify({ destino }) })
+
+// ---- etapa 8b: cobro de la cafeteria ----
+
+export interface BancoTarjeta { id: number; nombre: string }
+
+export interface ClienteCobro { numero: number; nombre: string; rnc: string | null; itbis: boolean; propina: boolean; tipo: number | null; credito: boolean }
+
+export interface PagoCafeteria { formaPago: number; monto: number; tipoTarjeta: number | null }
+
+export interface DatosCobro { tipo: number; cliente: number | null; rnc: string; nombre: string; pagos: PagoCafeteria[] }
+
+export interface RespuestaCobro {
+  cobro: { factura: number; mesa: number; encf: string; subTotal: number; itbis: number; propina: number; total: number; recibido: number; devuelta: number; credito: boolean }
+  dgii: EstadoEcf
+}
+
+export interface TicketCafeteria {
+  factura: number
+  mesa: number
+  encf: string | null
+  tipoNombre: string
+  fecha: string
+  vencimiento: string | null
+  emisor: { rnc: string; razonSocial: string; direccion: string; telefono: string | null }
+  nombre: string | null
+  identificacion: string | null
+  items: LineaImpresa[]
+  subTotal: number
+  itbis: number
+  propina: number
+  total: number
+  pagos: { formaPago: string; descripcion: string; monto: number }[]
+  devuelta: number
+  usuario: string | null
+  timbre: { codigoSeguridad: string | null; fechaHoraFirma: string | null; url: string | null }
+}
+
+export const bancosTarjeta = () => pedir<BancoTarjeta[]>(`${CAFE}/bancos`)
+export const nombreDgii = (rnc: string) => pedirOpcional<{ nombre: string }>(`${CAFE}/rnc/${encodeURIComponent(rnc)}`)
+export const clienteCobro = (numero: number) => pedir<ClienteCobro>(`${CAFE}/clientes/${numero}`)
+export const cobrarMesa = (mesa: number, d: DatosCobro) =>
+  pedir<RespuestaCobro>(`${CAFE}/mesas/${mesa}/cobrar`, { method: 'POST', body: JSON.stringify(d) })
+export const ticketCafeteria = (factura: number) => pedir<TicketCafeteria>(`${CAFE}/facturas/${factura}/ticket`)
+export const reenviarCafeteria = (factura: number) => pedir<EstadoEcf>(`${CAFE}/facturas/${factura}/enviar`, { method: 'POST' })

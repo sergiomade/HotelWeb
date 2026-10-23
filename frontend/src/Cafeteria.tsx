@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import CobroCafeteria from './CobroCafeteria'
 import Fondo from './Fondo'
 import {
   agregarArticulo, agregarEspecial, articulosCafeteria, borrarLineaMesa, cambiarLineaMesa, cuentaMesa, dinero, mesasCafeteria,
@@ -94,7 +95,8 @@ function Comanda({ mesa, mesas, articulos, alCambiar, alError, alCerrar, alMover
   const [aviso, setAviso] = useState('')
   const [buscar, setBuscar] = useState('')
   const [familia, setFamilia] = useState<number | null>(null)
-  const [dialogo, setDialogo] = useState<'mover' | 'especial' | null>(null)
+  const [dialogo, setDialogo] = useState<'mover' | 'especial' | 'cobrar' | null>(null)
+  const [cobrada, setCobrada] = useState(false)
   const buscador = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -237,11 +239,11 @@ function Comanda({ mesa, mesas, articulos, alCambiar, alError, alCerrar, alMover
       )}
 
       <div className="botones comanda-botones">
-        <button type="button" disabled={ocupado || !cuenta?.lineas.length} onClick={preCuenta}>Pre-cuenta</button>
+        <button type="button" className={cuenta?.preCuentaAlDia ? 'secundario' : ''} disabled={ocupado || !cuenta?.lineas.length} onClick={preCuenta}>Pre-cuenta</button>
+        <button type="button" disabled={ocupado || !cuenta?.preCuentaAlDia} onClick={() => setDialogo('cobrar')}>Cobrar</button>
         <button type="button" className="secundario" disabled={ocupado || !cuenta} onClick={() => setDialogo('mover')}>Mover de mesa</button>
         <button type="button" className="secundario" disabled={ocupado} onClick={() => setDialogo('especial')}>Artículo especial</button>
       </div>
-      {cuenta?.preCuentaAlDia && <p className="tenue">El cobro (con e-CF o a la habitación) llega en la próxima parte.</p>}
 
       <form className="comanda-buscar" onSubmit={alBuscar}>
         <label>Agregar (código o nombre, Enter agrega)
@@ -271,6 +273,11 @@ function Comanda({ mesa, mesas, articulos, alCambiar, alError, alCerrar, alMover
       {dialogo === 'mover' && cuenta && (
         <Mover mesa={mesa} mesas={mesas} alCerrar={() => setDialogo(null)}
                alElegir={(d) => hacer(() => moverMesa(mesa, d), () => { setDialogo(null); alMover(d) })} ocupado={ocupado} aviso={aviso} />
+      )}
+      {dialogo === 'cobrar' && cuenta && (
+        <CobroCafeteria cuenta={cuenta} alCobrar={() => { setCobrada(true); alCambiar() }}
+                        alCerrar={() => { setDialogo(null); if (cobrada) alCerrar() }}
+                        alVencer={() => alError(new SesionVencida('La sesion vencio: ingrese de nuevo.'))} />
       )}
       {dialogo === 'especial' && (
         <Especial alCerrar={() => setDialogo(null)} ocupado={ocupado} aviso={aviso}

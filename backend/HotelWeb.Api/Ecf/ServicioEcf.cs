@@ -17,9 +17,9 @@ public sealed record TimbreEcf(string? CodigoSeguridad, string? FechaHoraFirma, 
 
 /// <summary>
 /// De donde sale el documento: el check-out (HotelTmpFactura), el walk-in (HotelFacturaWalking) y sus notas de credito
-/// (HotelFacturaNC, HotelFacturaWalkingNC). Cada uno numera aparte.
+/// (HotelFacturaNC, HotelFacturaWalkingNC), y la cafeteria (FaTmpFactura). Cada uno numera aparte.
 /// </summary>
-public enum OrigenFactura { Hospedaje, WalkIn, NotaHospedaje, NotaWalkIn }
+public enum OrigenFactura { Hospedaje, WalkIn, NotaHospedaje, NotaWalkIn, Cafeteria }
 
 /// <summary>
 /// Arma el e-CF de una factura cerrada (HotelTmpFactura), lo guarda en FacturaXml (sp_GuardarFacturaXml) y lo envia por
@@ -74,7 +74,29 @@ public sealed class ServicioEcf
         if (origen == OrigenFactura.Hospedaje) return Leer(cn, tx, numero, out transferida);
         transferida = false;
         if (origen == OrigenFactura.WalkIn) return LeerWalkIn(cn, tx, numero);
+        if (origen == OrigenFactura.Cafeteria) return LeerCafeteria(cn, tx, numero);
         return LeerNota(cn, tx, origen, numero) is { } n ? ComoFactura(n.Nota, n.Original) : null;
+    }
+
+    /// <summary>
+    /// La factura cobrada de la cafeteria (FaTmpFactura), como CrearFacturaXml de Comunes\uCreateXml.pas: items de
+    /// cantidad x precio, credito (TipoPago 2) si algun pago fue a credito (forma 3) y el TOTAL grabado (no la suma).
+    /// </summary>
+    internal static FacturaEcf? LeerCafeteria(IDbConnection cn, IDbTransaction? tx, long numero)
+    {
+        var f = cn.QueryFirstOrDefault<(int Factura, string? Ncf, DateTime Fecha, string? Rnc, string? Nombre, decimal SubTotal, decimal Itbis,
+                decimal Propina, decimal Total, bool Credito)>("""
+            SELECT f.InvFactura, RTRIM(f.NCF), f.Fecha, RTRIM(f.RncCliente), RTRIM(f.NombreCliente), f.Subtotal, f.Itbis, f.Propina, f.Total,
+                   CAST(CASE WHEN EXISTS (SELECT 1 FROM faFacturaPago p WHERE p.InvFactura = f.InvFactura AND p.FormaPago_id = 3) THEN 1 ELSE 0 END AS bit)
+            FROM FaTmpFactura f WHERE f.InvFactura = @numero
+            """, new { numero = (int)numero }, tx);
+        if (f.Factura == 0) return null;
+        var lineas = cn.Query<(string Descripcion, decimal Cantidad, decimal Precio)>(
+            "SELECT Descripcion, Cantidad, Precio FROM FaTmpFacturaDetalle WHERE InvFactura = @numero ORDER BY Secuencia",
+            new { numero = (int)numero }, tx);
+        return new FacturaEcf(f.Ncf ?? "", f.Factura, f.Fecha.Date, f.Rnc, f.Nombre, f.SubTotal, f.Itbis, f.Propina, f.Credito,
+            EcfHotel.Items(lineas.Select(l => (l.Descripcion ?? "", l.Cantidad, l.Precio,
+                Math.Round(l.Cantidad * l.Precio, 2, MidpointRounding.AwayFromZero), true))), f.Total);
     }
 
     private sealed class FilaNota

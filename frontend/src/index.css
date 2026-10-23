@@ -478,3 +478,10 @@ button.chico { padding: 0.15em 0.6em; font-size: 0.85em; }
   .cafe-cuerpo.con-cuenta .cafe-mesas { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
   .cafe-cuerpo.con-cuenta .mesa { min-height: 56px; }
 }
+
+/* ---- cobro de la cafeteria (etapa 8b) ---- */
+.dialogo.cobro { width: min(720px, 100%); max-height: calc(100vh - 32px); overflow: auto; }
+.cobro .pago-linea { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-top: 8px; }
+.cobro .pago-linea label { flex: 1 1 140px; }
+.cobro .pago-linea button { flex: 0 0 auto; }
+.devuelta { font-size: 1.4em; margin: 6px 0; }

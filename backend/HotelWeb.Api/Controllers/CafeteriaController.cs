@@ -1,6 +1,9 @@
 using HotelWeb.Api.Cafeteria;
 using HotelWeb.Api.Catalogos;
+using HotelWeb.Api.Ecf;
 using HotelWeb.Api.Seguridad;
+using HotelWeb.Core.Cafeteria;
+using HotelWeb.Core.Ecf;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HotelWeb.Api.Controllers;
@@ -14,17 +17,25 @@ public sealed record SolicitudCambioLinea(decimal Cantidad, bool? PorFraccion);
 
 public sealed record SolicitudMover(int Destino);
 
+public sealed record SolicitudPagoCafeteria(int FormaPago, decimal Monto, int? TipoTarjeta);
+
+public sealed record SolicitudCobro(int Tipo, long? Cliente, string? Rnc, string? Nombre, IReadOnlyList<SolicitudPagoCafeteria> Pagos);
+
+public sealed record RespuestaCobro(ResultadoCobro Cobro, EstadoEcf Dgii);
+
 /// <summary>Cafeteria (etapa 8a): mesas, cuenta abierta de cada una, pre-cuenta y mover de mesa. Cualquier usuario, como Delphi.</summary>
 [ApiController]
 [Route("api/cafeteria")]
 public sealed class CafeteriaController : ControllerBase
 {
     private readonly RepositorioCafeteria _cafe;
+    private readonly ServicioEcf _ecf;
     private readonly ILogger<CafeteriaController> _log;
 
-    public CafeteriaController(RepositorioCafeteria cafe, ILogger<CafeteriaController> log)
+    public CafeteriaController(RepositorioCafeteria cafe, ServicioEcf ecf, ILogger<CafeteriaController> log)
     {
         _cafe = cafe;
+        _ecf = ecf;
         _log = log;
     }
 
@@ -90,6 +101,70 @@ public sealed class CafeteriaController : ControllerBase
             return Ok(c);
         }
         catch (ErrorCatalogo e) { return BadRequest(e.Message); }
+    }
+
+    // ---- etapa 8b: cobro con e-CF ----
+
+    [HttpGet("bancos")]
+    public ActionResult<IReadOnlyList<BancoTarjeta>> Bancos() => Ok(_cafe.Bancos());
+
+    /// <summary>El nombre en la DGII de un RNC o cedula; 204 si no esta.</summary>
+    [HttpGet("rnc/{rnc}")]
+    public ActionResult<string> Rnc(string rnc) => _cafe.NombreDgii(rnc) is { } n ? Ok(new { nombre = n }) : NoContent();
+
+    [HttpGet("clientes/{numero:long}")]
+    public ActionResult<ClienteCobro> Cliente(long numero)
+    {
+        try { return _cafe.ClienteDeCobro(numero) is { } c ? Ok(c) : NotFound($"No existe el cliente {numero}."); }
+        catch (ErrorCatalogo e) { return BadRequest(e.Message); }
+    }
+
+    /// <summary>Cobra la mesa (e-NCF, pagos, CxC, cierre) y despues envia el e-CF. Si el envio falla, ya esta cobrada: se reenvia.</summary>
+    [HttpPost("mesas/{mesa:int}/cobrar")]
+    public async Task<ActionResult<RespuestaCobro>> Cobrar(int mesa, SolicitudCobro s)
+    {
+        ResultadoCobro r;
+        try
+        {
+            r = _cafe.Cobrar(mesa, new DatosCobro(s.Tipo, s.Cliente, s.Rnc, s.Nombre,
+                (s.Pagos ?? []).Select(p => new PagoCafeteria(p.FormaPago, p.Monto, p.TipoTarjeta)).ToList()), Login);
+        }
+        catch (Exception e) when (e is ErrorCatalogo or ErrorEcf) { return BadRequest(e.Message); }
+        _log.LogWarning("{Usuario} cobro la mesa {Mesa}: factura {Factura} ({Encf}) por {Total}{Credito}", Login, mesa, r.Factura, r.Encf, r.Total,
+            r.Credito ? " (con credito)" : "");
+        EstadoEcf estado;
+        try { estado = await _ecf.Enviar(r.Factura, OrigenFactura.Cafeteria); }
+        catch (Exception e) when (e is ErrorCatalogo or ErrorEcf) { estado = new EstadoEcf(r.Encf, r.Factura, "Sin enviar", e.Message, false); }
+        _log.LogInformation("{Encf} (cafeteria {Factura}): {Estado} {Mensaje}", r.Encf, r.Factura, estado.Estado, estado.Mensaje);
+        return Ok(new RespuestaCobro(r, estado));
+    }
+
+    [HttpGet("facturas/{factura:long}/ticket")]
+    public async Task<ActionResult<TicketCafeteria>> Ticket(long factura)
+    {
+        try { return Ok(await _cafe.Ticket(factura, _ecf)); }
+        catch (ErrorCatalogo e) { return BadRequest(e.Message); }
+    }
+
+    [HttpGet("facturas/{factura:long}/dgii")]
+    public async Task<ActionResult<EstadoEcf>> Estado(long factura)
+    {
+        try { return Ok(await _ecf.Consultar(factura, OrigenFactura.Cafeteria)); }
+        catch (Exception e) when (e is ErrorCatalogo or ErrorEcf) { return BadRequest(e.Message); }
+    }
+
+    [HttpPost("facturas/{factura:long}/enviar")]
+    public async Task<ActionResult<EstadoEcf>> Reenviar(long factura)
+    {
+        try
+        {
+            var actual = await _ecf.Consultar(factura, OrigenFactura.Cafeteria);
+            if (actual.Aceptado) return BadRequest($"El {actual.Encf} ya fue aceptado por la DGII: no se vuelve a enviar.");
+            var e = await _ecf.Enviar(factura, OrigenFactura.Cafeteria);
+            _log.LogWarning("{Usuario} reenvio el {Encf} (cafeteria {Factura}): {Estado}", Login, e.Encf, factura, e.Estado);
+            return Ok(e);
+        }
+        catch (Exception e) when (e is ErrorCatalogo or ErrorEcf) { return BadRequest(e.Message); }
     }
 
     private ActionResult<CuentaMesa> Hacer(Func<CuentaMesa> accion)
