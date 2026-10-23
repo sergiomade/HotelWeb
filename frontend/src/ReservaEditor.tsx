@@ -87,6 +87,17 @@ export default function ReservaEditor({ id, alCerrar, alVencer }: {
     })
   }
 
+  /** Tocar un precio de la tabla: cambia la linea de ese tipo (la primera) a esa categoria, o agrega una. */
+  function usarPrecio(tipo: number, categoria: string) {
+    const i = d.lineas.findIndex((l) => l.tipo === tipo)
+    if (i >= 0) {
+      cambiarLinea(i, { categoria })
+      return
+    }
+    const t = tipos.find((x) => x.id === tipo)
+    setD({ ...d, lineas: [...d.lineas, { tipo, cantidad: 1, adultos: t?.maximo || 1, ninos: 0, bebes: 0, credito: true, categoria, tarifa: tarifaDe(tipo, categoria) }] })
+  }
+
   const total = d.lineas.reduce((s, l) => s + l.cantidad * l.tarifa * Math.max(0, noches), 0)
 
   async function enviar(ev: FormEvent) {
@@ -209,18 +220,20 @@ export default function ReservaEditor({ id, alCerrar, alVencer }: {
               <p className="tenue">{noches > 0 ? `${noches} ${noches === 1 ? 'noche' : 'noches'}` : 'La salida tiene que ser después de la entrada.'}</p>
             </fieldset>
 
+            <TablaPrecios precios={precios!} tipos={tipos} libres={libres} activa={editable}
+                          elegida={(t, c) => d.lineas.some((l) => l.tipo === t && l.categoria === c)}
+                          alElegir={usarPrecio} />
+
             <fieldset disabled={!editable} className="grupo">
               <legend>Habitaciones (por tipo: el número se asigna en el check-in)</legend>
               <div className="tabla-marco">
                 <table className="tabla lineas">
                   <thead>
                     <tr><th>Tipo</th><th>Cat.</th><th className="num">Cant.</th><th className="num">Adultos</th><th className="num">Niños</th>
-                      <th className="num">Bebés</th><th>Crédito</th><th className="num">Tarifa</th><th className="num">Importe</th><th className="num">Libres</th><th></th></tr>
+                      <th className="num">Bebés</th><th>Crédito</th><th className="num">Tarifa</th><th className="num">Importe</th><th></th></tr>
                   </thead>
                   <tbody>
                     {d.lineas.map((l, i) => {
-                      const lib = libres.find((x) => x.tipo === l.tipo)
-                      const pedidas = d.lineas.filter((x) => x.tipo === l.tipo).reduce((s, x) => s + x.cantidad, 0)
                       return (
                         <tr key={i}>
                           <td><select value={l.tipo} onChange={(x) => cambiarLinea(i, { tipo: Number(x.target.value) })}>
@@ -238,12 +251,11 @@ export default function ReservaEditor({ id, alCerrar, alVencer }: {
                                      title={`Sin impuestos. Con ITBIS y propina: ${dinero(Math.round(l.tarifa * FACTOR_IMPUESTOS * 100) / 100)}`}
                                      onChange={(x) => cambiarLinea(i, { tarifa: Number(x.target.value.replace(/,/g, '')) || 0 })} /></td>
                           <td className="num">{dinero(l.cantidad * l.tarifa * Math.max(0, noches))}</td>
-                          <td className={`num${lib && pedidas > lib.libres ? ' mal' : ''}`}>{lib ? Math.max(0, lib.libres) : ''}</td>
                           <td><button type="button" className="secundario" onClick={() => setD({ ...d, lineas: d.lineas.filter((_, j) => j !== i) })} aria-label="Quitar">Quitar</button></td>
                         </tr>
                       )
                     })}
-                    {d.lineas.length === 0 && <tr><td colSpan={11} className="tenue">Agregue el tipo de habitación.</td></tr>}
+                    {d.lineas.length === 0 && <tr><td colSpan={10} className="tenue">Agregue el tipo de habitación (o toque un precio arriba).</td></tr>}
                   </tbody>
                 </table>
               </div>
@@ -273,6 +285,62 @@ export default function ReservaEditor({ id, alCerrar, alVencer }: {
         </div>
       </form>
     </Fondo>
+  )
+}
+
+/**
+ * Precios por tipo y categoria siempre a la vista, para negociar con el cliente (como la reserva de Delphi).
+ * Arriba el precio por noche con ITBIS y propina; debajo, sin impuestos. Tocar uno lo usa en la reserva.
+ */
+function TablaPrecios({ precios, tipos, libres, activa, elegida, alElegir }: {
+  precios: PantallaPrecios
+  tipos: PantallaPrecios['tabla']['tipos']
+  libres: Disponibilidad[]
+  activa: boolean
+  elegida: (tipo: number, categoria: string) => boolean
+  alElegir: (tipo: number, categoria: string) => void
+}) {
+  const cats = precios.tabla.categorias
+  return (
+    <fieldset className="grupo">
+      <legend>Precios por noche, con ITBIS y propina {activa && <span className="tenue">· toque uno para usarlo</span>}</legend>
+      <div className="tabla-marco">
+        <table className="tabla matriz precios-reserva">
+          <thead>
+            <tr>
+              <th>Tipo</th>
+              <th className="num">Libres</th>
+              {cats.map((c) => <th key={c.id} className="num" title={c.descripcion}>{c.id}{c.descripcion !== c.id ? <span className="tenue"> {c.descripcion.toLowerCase()}</span> : null}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {tipos.map((t) => {
+              const lib = libres.find((x) => x.tipo === t.id)
+              return (
+                <tr key={t.id}>
+                  <th scope="row" title={`${t.minimo === t.maximo ? t.maximo : `${t.minimo} a ${t.maximo}`} personas`}>{t.descripcion}</th>
+                  <td className={`num${lib && lib.libres <= 0 ? ' mal' : ''}`}>{lib ? Math.max(0, lib.libres) : ''}</td>
+                  {cats.map((c) => {
+                    const p = precios.tabla.precios.find((x) => x.tipo === t.id && x.categoria === c.id)
+                    if (!p) return <td key={c.id} className="num tenue">-</td>
+                    // una sola linea: el precio con ITBIS y propina; el de sin impuestos, al pasar el mouse
+                    const contenido = <>{dinero(p.conImpuestos)}</>
+                    return (
+                      <td key={c.id} className={`num celda${elegida(t.id, c.id) ? ' elegida' : ''}`}>
+                        {activa
+                          ? <button type="button" className="celda-boton" onClick={() => alElegir(t.id, c.id)}
+                                    title={`${t.descripcion} ${c.id}: ${dinero(p.sinImpuestos)} sin impuestos. Toque para usarlo.`}>{contenido}</button>
+                          : <span title={`${dinero(p.sinImpuestos)} sin impuestos`}>{contenido}</span>}
+                      </td>
+                    )
+                  })}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </fieldset>
   )
 }
 

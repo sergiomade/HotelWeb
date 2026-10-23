@@ -293,3 +293,17 @@ button.peligro { background: var(--mal); color: #fff; }
 .sugerencias button { width: 100%; text-align: left; background: transparent; color: var(--texto); padding: 6px 8px; }
 .sugerencias button:hover { background: var(--fondo); }
 @media (max-width: 760px) { .reservas { width: 100%; } .tres, .cuatro { grid-template-columns: 1fr; } }
+
+/* precios a la vista en la reserva */
+.precios-reserva { font-size: 0.92rem; }
+.precios-reserva td.celda { padding: 2px; }
+.precios-reserva .celda-boton, .precios-reserva td.celda > span { padding: 4px 6px; }
+.precios-reserva td.elegida { outline: 2px solid var(--primario); outline-offset: -2px; border-radius: 4px; }
+
+/* precios en la reserva: compactos (una linea por casilla) */
+fieldset.grupo:has(.precios-reserva) { padding: 6px 10px 8px; gap: 4px; }
+.precios-reserva { font-size: 0.82rem; line-height: 1.15; }
+.precios-reserva th, .precios-reserva td { padding: 2px 6px; }
+.precios-reserva td.celda { padding: 1px; }
+.precios-reserva .celda-boton, .precios-reserva td.celda > span { display: block; padding: 2px 6px; min-height: 0; text-align: right; }
+.precios-reserva thead th { font-size: 0.95em; }

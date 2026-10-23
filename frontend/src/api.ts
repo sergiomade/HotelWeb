@@ -463,6 +463,75 @@ export const registrarAdelanto = (id: number, monto: number, formaPago: number, 
 export const anularAdelanto = (id: number, adelanto: number) =>
   pedir<Reserva>(`/api/reservas/${id}/adelantos/${adelanto}/anular`, { method: 'POST' })
 
+// ---- recepcion: check-in y hospedaje de la noche ----
+
+export interface LlegadaHoy {
+  reserva: number
+  cliente: string
+  clienteId: number | null
+  huesped: string | null
+  entrada: string
+  salida: string
+  habitaciones: number
+  detalle: string | null
+  adelantos: number
+  atrasada: boolean
+}
+
+export interface LugarCheckIn {
+  secuencia: number
+  indice: number
+  tipo: number
+  tipoNombre: string
+  categoria: string | null
+  tarifa: number
+  adultos: number
+  ninos: number
+  bebes: number
+  credito: boolean
+  sugerida: number | null
+}
+
+export interface LibreCheckIn { numero: number; tipo: number; tipoNombre: string; disponible: boolean }
+
+export interface PreparacionCheckIn {
+  reserva: number
+  cliente: string
+  clienteId: number | null
+  huesped: string | null
+  entrada: string
+  salida: string
+  noches: number
+  adelantos: number
+  lugares: LugarCheckIn[]
+  libres: LibreCheckIn[]
+}
+
+export interface Asignacion { secuencia: number; indice: number; habitacion: number }
+
+export type EstadoNoche = 'PorCargar' | 'YaCargada' | 'Transferida' | 'SinTarifa'
+
+export interface NocheCuenta {
+  habitacion: number
+  factura: number
+  huesped: string | null
+  tarifa: number
+  salida: string | null
+  estado: EstadoNoche
+  salidaVencida: boolean
+}
+
+export interface CargaNoche { noche: string; descripcion: string; cuentas: NocheCuenta[]; porCargar: number; total: number }
+
+export const llegadasHoy = () => pedir<LlegadaHoy[]>('/api/hospedaje/llegadas')
+export const prepararCheckIn = (reserva: number) => pedir<PreparacionCheckIn>(`/api/hospedaje/checkin/${reserva}`)
+export const hacerCheckIn = (reserva: number, habitaciones: Asignacion[], clienteId: number | null) =>
+  pedir<{ reserva: number; cuentas: { habitacion: number; factura: number }[]; avisos: string[] }>(
+    `/api/hospedaje/checkin/${reserva}`, { method: 'POST', body: JSON.stringify({ clienteId, habitaciones }) })
+export const verNoche = (noche: string) => pedir<CargaNoche>(`/api/hospedaje/noche/${noche}`)
+export const cargarNoche = (noche: string, sinVencidas: boolean) =>
+  pedir<{ noche: CargaNoche; cargadas: number }>(`/api/hospedaje/noche/${noche}?sinVencidas=${sinVencidas}`, { method: 'POST' })
+
 /** Fecha de hoy (o +dias) como aaaa-mm-dd, en la hora local. */
 export function hoyIso(dias = 0): string {
   const d = new Date()

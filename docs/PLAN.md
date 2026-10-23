@@ -131,3 +131,20 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   Pantallas Reservas y editor (cliente con busqueda, lineas por tipo con tarifa de la tabla de precios, libres por
   tipo, adelantos) HECHAS y probadas por el usuario. 126 pruebas.
   - Falta de la etapa 3: confirmacion impresa (decidido: despues).
+## Etapa 4 (hospedaje en curso): decisiones del usuario (2026-10-22)
+- Orden: 1) check-in desde la reserva + carga del hospedaje de la noche; 2) cargar servicios a la cuenta;
+  3) recibos de pago; 4) cambio de salida, de habitacion y transferencia.
+- Check-in: sugerir habitaciones libres del TIPO reservado (Delphi: Fn_HabitacionDisponible no usa el tipo).
+  HotelHabitacionReservadaTmp es UNA tabla para todos y STP_CrearHabitacionesReserva la vacia entera: la web
+  llena solo las filas de su reserva y hace todo (Tmp + STP_CheckInHabitaciones) en una transaccion.
+  Delphi exige cliente en la reserva para el check-in.
+- Hospedaje de la noche: a mano por fecha (como "Cargar hospedaje" / STP_CargarHospedajeDiario) pero SIN repetir:
+  en Hotel_new hay 320 cuentas con la misma noche cargada dos veces. Saltar tambien las cuentas transferidas.
+- Recibos: en esta etapa, con los procedimientos de Delphi (STP_CARGARPAGOAHABITACION, Stp_AnularRecibodeIngreso,
+  que escriben asientos en ConCabezeraDiario). Estudiarlos a fondo antes.- Etapa 4, parte 1 HECHA (2026-10-22): check-in y carga de la noche (`/api/hospedaje`). Check-in con
+  STP_CheckInHabitaciones (Tmp solo de la reserva, todo en una transaccion serializable), sugiere libres del tipo,
+  pide cliente si la reserva no tiene. Carga de la noche sin repetir, salta transferidas y sin tarifa, opcion de no
+  cargar las de salida vencida. Probado contra Hotel_new (y limpiado). Pantalla Recepcion (Check-in | Cargar noche).
+  Probada por el usuario. 133 pruebas.
+  - Reserva: precios por tipo y categoria siempre a la vista (compactos, una linea; tocar uno lo usa), como Delphi.
+- Siguiente de la etapa 4: cargar servicios a la cuenta.
