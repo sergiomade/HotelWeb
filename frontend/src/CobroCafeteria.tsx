@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import Espera from './Espera'
 import Fondo from './Fondo'
 import {
-  bancosTarjeta, buscarClientes, clienteCobro, cobrarMesa, dinero, nombreDgii, reenviarCafeteria, SesionVencida,
-  type BancoTarjeta, type ClienteCobro, type ClienteResumen, type CuentaMesa, type EstadoEcf, type RespuestaCobro,
+  bancosTarjeta, buscarClientes, cargarAHabitacion, clienteCobro, cobrarMesa, dinero, fecha, habitacionesCafeteria, nombreDgii,
+  reenviarCafeteria, SesionVencida,
+  type BancoTarjeta, type ClienteCobro, type ClienteResumen, type CuentaMesa, type EstadoEcf, type HabitacionCafeteria,
+  type RespuestaCobro, type ResultadoCargo,
 } from './api'
 
 // los mismos de la API (ReglasCheckout.Tipos)
@@ -47,6 +49,8 @@ export default function CobroCafeteria({ cuenta, alCerrar, alCobrar, alVencer }:
   const [error, setError] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [hecho, setHecho] = useState<RespuestaCobro | null>(null)
+  const [modo, setModo] = useState<'cobrar' | 'habitacion'>('cobrar')
+  const [cargado, setCargado] = useState<ResultadoCargo | null>(null)
 
   const manejar = (e: unknown) => (e instanceof SesionVencida ? alVencer() : setError(e instanceof Error ? e.message : String(e)))
 
@@ -159,12 +163,19 @@ export default function CobroCafeteria({ cuenta, alCerrar, alCobrar, alVencer }:
   }
 
   if (hecho) return <Cobrada r={hecho} alCerrar={alCerrar} alError={manejar} />
+  if (cargado) return <Cargada r={cargado} alCerrar={alCerrar} />
+  if (modo === 'habitacion')
+    return <CargoHabitacion cuenta={cuenta} alVolver={() => setModo('cobrar')} alCerrar={alCerrar} alError={manejar}
+                            alCargado={(r) => { setCargado(r); alCobrar() }} />
 
   return (
     <Fondo centro>
       {enviando && <Espera texto="Conectando con la DGII, espere..." />}
       <form className="dialogo ancho cobro" role="dialog" aria-modal="true" aria-label={`Cobrar la mesa ${cuenta.mesa}`} onSubmit={cobrar}>
-        <h2>Cobrar · {cuenta.nombreMesa} · cuenta #{cuenta.factura}</h2>
+        <div className="cobro-cabeza">
+          <h2>Cobrar · {cuenta.nombreMesa} · cuenta #{cuenta.factura}</h2>
+          <button type="button" className="secundario" onClick={() => setModo('habitacion')}>Cargar a habitación</button>
+        </div>
 
         <fieldset className="grupo-cargo">
           <legend>Cliente</legend>
@@ -276,6 +287,96 @@ function Cobrada({ r, alCerrar, alError }: { r: RespuestaCobro; alCerrar: () => 
           <button type="button" className="secundario" onClick={() => window.open(`/cafeteria/${c.factura}`, '_blank')}>Imprimir ticket</button>
           <button type="button" onClick={alCerrar}>Listo</button>
         </div>
+      </div>
+    </Fondo>
+  )
+}
+
+/** Cargar la cuenta a una habitacion ocupada con credito (etapa 8c): sin e-CF; pasa el subtotal a la cuenta del hotel. */
+function CargoHabitacion({ cuenta, alVolver, alCerrar, alCargado, alError }: {
+  cuenta: CuentaMesa
+  alVolver: () => void
+  alCerrar: () => void
+  alCargado: (r: ResultadoCargo) => void
+  alError: (e: unknown) => void
+}) {
+  const [habs, setHabs] = useState<HabitacionCafeteria[] | null>(null)
+  const [elegida, setElegida] = useState<HabitacionCafeteria | null>(null)
+  const [enviando, setEnviando] = useState(false)
+  const [aviso, setAviso] = useState('')
+
+  useEffect(() => {
+    habitacionesCafeteria().then(setHabs).catch(alError)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const tecla = (k: KeyboardEvent) => k.key === 'Escape' && !enviando && alCerrar()
+    window.addEventListener('keydown', tecla)
+    return () => window.removeEventListener('keydown', tecla)
+  }, [alCerrar, enviando])
+
+  async function cargar() {
+    if (!elegida || enviando) return
+    if (!window.confirm(`¿Cargar la mesa ${cuenta.mesa} (${dinero(cuenta.totales.subTotal)} sin impuestos) a la habitación ${elegida.habitacion}${elegida.huesped ? `, ${elegida.huesped}` : ''}?`)) return
+    setEnviando(true)
+    setAviso('')
+    try {
+      alCargado(await cargarAHabitacion(cuenta.mesa, elegida.habitacion))
+    } catch (e) {
+      if (e instanceof SesionVencida) alError(e)
+      else setAviso(e instanceof Error ? e.message : String(e))
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <Fondo centro>
+      <div className="dialogo ancho cobro" role="dialog" aria-modal="true" aria-label={`Cargar la mesa ${cuenta.mesa} a una habitación`}>
+        <div className="cobro-cabeza">
+          <h2>Cargar a habitación · {cuenta.nombreMesa}</h2>
+          <button type="button" className="secundario" onClick={alVolver} disabled={enviando}>Volver al cobro</button>
+        </div>
+        <p className="tenue">Sin comprobante: a la cuenta de la habitación pasa el subtotal <strong>{dinero(cuenta.totales.subTotal)}</strong>.
+          El ITBIS y la propina van en la factura del hotel al check-out. Solo habitaciones con crédito en la cafetería.</p>
+        {!habs ? <p className="tenue">Cargando las habitaciones...</p>
+          : habs.length === 0 ? <p className="alerta">No hay habitaciones ocupadas.</p>
+          : (
+            <div className="cafe-mesas habitaciones-cargo" role="list" aria-label="Habitaciones ocupadas">
+              {habs.map((h) => (
+                <button key={h.habitacion} type="button" role="listitem" disabled={!h.credito || enviando}
+                        className={`mesa ${h.credito ? 'm-Abierta' : 'm-Libre'}${elegida?.habitacion === h.habitacion ? ' elegida' : ''}`}
+                        onClick={() => setElegida(h)} title={h.credito ? '' : 'Sin crédito en la cafetería'}>
+                  <span className="num">{h.habitacion}</span>
+                  <span>{h.huesped ?? ''}</span>
+                  <span className="tenue">{h.credito ? h.salida ? `sale ${fecha(h.salida)}` : '' : 'sin crédito'}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        {aviso && <p className="error" role="alert">{aviso}</p>}
+        <div className="botones">
+          <button type="button" className="secundario" onClick={alCerrar} disabled={enviando}>Cancelar</button>
+          <button type="button" onClick={cargar} disabled={!elegida || enviando}>
+            {elegida ? `Cargar ${dinero(cuenta.totales.subTotal)} a la ${elegida.habitacion}` : 'Elija la habitación'}
+          </button>
+        </div>
+      </div>
+    </Fondo>
+  )
+}
+
+function Cargada({ r, alCerrar }: { r: ResultadoCargo; alCerrar: () => void }) {
+  return (
+    <Fondo centro>
+      <div className="dialogo" role="dialog" aria-modal="true" aria-label="Mesa cargada a la habitación">
+        <h2>Mesa {r.mesa} cargada a la habitación {r.habitacion}</h2>
+        <dl className="datos-lista">
+          <dt>Huésped</dt><dd>{r.huesped ?? ''}</dd>
+          <dt>Pasó a la cuenta</dt><dd><strong>{dinero(r.subTotal)}</strong> (línea "CAFETERIA - FACTURA # {r.factura}")</dd>
+        </dl>
+        <div className="botones"><button type="button" onClick={alCerrar} autoFocus>Listo</button></div>
       </div>
     </Fondo>
   )

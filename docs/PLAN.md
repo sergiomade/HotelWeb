@@ -263,3 +263,8 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   EstatusFactura_id queda en 1 en FaTmpFactura, como Delphi. El e-CF lleva el TOTAL grabado (FacturaEcf.TotalCobrado):
   XML igual byte a byte a E310000000233 y E320000006062 (+RFCE). Probado en testecf: E310000000239 (12795, tarjeta +
   efectivo con devuelta), E310000000240 (12796, credito a BANCO BHD 2027) y E320000006073 (12793, RFCE) ACEPTADAS.
+- Parte 8c HECHA (2026-10-23, sin commit): "Cargar a habitacion" en el cobro (`GET /api/cafeteria/habitaciones`,
+  `POST /api/cafeteria/mesas/{m}/habitacion`). Sin e-NCF; cliente FaParametro.CuentaClienteHabitacion (2), nombre del
+  huesped, pago forma 8 por el SUBTOTAL, STP_PasarAlHotel (linea "CAFETERIA - FACTURA # n", servicio 7) y la web
+  recalcula el encabezado de la cuenta del hotel (Delphi no). Solo habitaciones ocupadas, no transferidas y con credito
+  (todas las lineas de la reserva con Credito = 1). Probado en Hotel_new: mesa 3 (factura 12797, 562.50) a la 102.

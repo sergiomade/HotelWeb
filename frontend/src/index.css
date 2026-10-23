@@ -485,3 +485,7 @@ button.chico { padding: 0.15em 0.6em; font-size: 0.85em; }
 .cobro .pago-linea label { flex: 1 1 140px; }
 .cobro .pago-linea button { flex: 0 0 auto; }
 .devuelta { font-size: 1.4em; margin: 6px 0; }
+.cobro-cabeza { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cobro-cabeza h2 { margin: 0; }
+.habitaciones-cargo { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); margin: 10px 0; }
+.habitaciones-cargo .mesa span:nth-child(2) { font-size: 0.8rem; text-align: center; overflow-wrap: anywhere; }

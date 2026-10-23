@@ -998,3 +998,13 @@ export const cobrarMesa = (mesa: number, d: DatosCobro) =>
   pedir<RespuestaCobro>(`${CAFE}/mesas/${mesa}/cobrar`, { method: 'POST', body: JSON.stringify(d) })
 export const ticketCafeteria = (factura: number) => pedir<TicketCafeteria>(`${CAFE}/facturas/${factura}/ticket`)
 export const reenviarCafeteria = (factura: number) => pedir<EstadoEcf>(`${CAFE}/facturas/${factura}/enviar`, { method: 'POST' })
+
+// ---- etapa 8c: cargo a la habitacion ----
+
+export interface HabitacionCafeteria { habitacion: number; factura: number; huesped: string | null; salida: string | null; credito: boolean }
+
+export interface ResultadoCargo { factura: number; mesa: number; habitacion: number; huesped: string | null; subTotal: number; total: number }
+
+export const habitacionesCafeteria = () => pedir<HabitacionCafeteria[]>(`${CAFE}/habitaciones`)
+export const cargarAHabitacion = (mesa: number, habitacion: number) =>
+  pedir<ResultadoCargo>(`${CAFE}/mesas/${mesa}/habitacion`, { method: 'POST', body: JSON.stringify({ habitacion }) })

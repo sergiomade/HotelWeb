@@ -23,6 +23,8 @@ public sealed record SolicitudCobro(int Tipo, long? Cliente, string? Rnc, string
 
 public sealed record RespuestaCobro(ResultadoCobro Cobro, EstadoEcf Dgii);
 
+public sealed record SolicitudCargoHabitacion(int Habitacion);
+
 /// <summary>Cafeteria (etapa 8a): mesas, cuenta abierta de cada una, pre-cuenta y mover de mesa. Cualquier usuario, como Delphi.</summary>
 [ApiController]
 [Route("api/cafeteria")]
@@ -165,6 +167,25 @@ public sealed class CafeteriaController : ControllerBase
             return Ok(e);
         }
         catch (Exception e) when (e is ErrorCatalogo or ErrorEcf) { return BadRequest(e.Message); }
+    }
+
+    // ---- etapa 8c: cargo a la habitacion ----
+
+    [HttpGet("habitaciones")]
+    public ActionResult<IReadOnlyList<HabitacionCafeteria>> Habitaciones() => Ok(_cafe.Habitaciones());
+
+    /// <summary>Carga la cuenta de la mesa a la habitacion (sin e-CF: va en la factura del hotel al check-out).</summary>
+    [HttpPost("mesas/{mesa:int}/habitacion")]
+    public ActionResult<ResultadoCargo> CargarAHabitacion(int mesa, SolicitudCargoHabitacion s)
+    {
+        try
+        {
+            var r = _cafe.CargarAHabitacion(mesa, s.Habitacion, Login);
+            _log.LogWarning("{Usuario} cargo la mesa {Mesa} (factura {Factura}, subtotal {SubTotal}) a la habitacion {Habitacion}",
+                Login, mesa, r.Factura, r.SubTotal, r.Habitacion);
+            return Ok(r);
+        }
+        catch (ErrorCatalogo e) { return BadRequest(e.Message); }
     }
 
     private ActionResult<CuentaMesa> Hacer(Func<CuentaMesa> accion)
