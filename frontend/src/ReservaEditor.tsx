@@ -278,6 +278,7 @@ export default function ReservaEditor({ id, alCerrar, alVencer }: {
         <div className="botones">
           {reserva && editable && <button type="button" className="peligro" onClick={cancelar}>Cancelar la reserva</button>}
           <span className="espacio" />
+          {reserva && <button type="button" className="secundario" onClick={() => window.open(`/reserva/${reserva.id}`, '_blank')}>Imprimir confirmación</button>}
           <button type="button" className="secundario" onClick={() => alCerrar(avisos.length ? `Guardada la reserva ${reserva?.id}.` : undefined)}>Cerrar</button>
           {editable && <button type="submit" disabled={guardando || !!cargando || d.lineas.length === 0 || noches < 1 || !d.nombreCliente.trim()}>
             {guardando ? 'Guardando...' : 'Guardar'}

@@ -69,6 +69,10 @@ public sealed class ReservasController : ControllerBase
     public ActionResult<Reserva> Obtener(long id) =>
         _reservas.Obtener(id) is { } r ? Ok(r) : NotFound($"No existe la reserva {id}.");
 
+    [HttpGet("{id:long}/impresa")]
+    public ActionResult<ReservaImpresa> Impresa(long id) =>
+        _reservas.Impresa(id) is { } r ? Ok(r) : NotFound($"No existe la reserva {id}.");
+
     [HttpPost]
     public ActionResult<ReservaGuardada> Crear(SolicitudReserva s) => Hacer(() =>
     {

@@ -106,6 +106,10 @@ public sealed class CuentasController : ControllerBase
         return r;
     });
 
+    [HttpGet("~/api/recibos/{numero:long}")]
+    public ActionResult<ReciboImpreso> ReciboImpreso(long numero) =>
+        _recibos.Impreso(numero) is { } r ? Ok(r) : NotFound($"No existe el recibo {numero}.");
+
     [HttpPost("~/api/recibos/{numero:long}/anular")]
     public ActionResult<Recibo> AnularRecibo(long numero)
     {

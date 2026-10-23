@@ -2,6 +2,9 @@ using System.Data;
 using Dapper;
 using HotelWeb.Api.Catalogos;
 using HotelWeb.Api.Datos;
+using HotelWeb.Api.Ecf;
+using HotelWeb.Core.Comun;
+using HotelWeb.Core.Ecf;
 using HotelWeb.Core.Hospedaje;
 
 namespace HotelWeb.Api.Hospedaje;
@@ -11,6 +14,9 @@ public sealed record PagoVista(int FormaPago, string FormaPagoNombre, string Des
 
 public sealed record Recibo(long Numero, DateTime Fecha, int Habitacion, string Nombre, string? Concepto, decimal Monto,
     string Estatus, bool Posteado, string? Usuario, IReadOnlyList<PagoVista> Pagos);
+
+/// <summary>El recibo para imprimir (media carta, como ppReport3 de UFrmMntRecibos): la suma en letras y el codigo del cliente.</summary>
+public sealed record ReciboImpreso(EmisorEcf Emisor, Recibo Recibo, long? ClienteId, string EnLetras);
 
 /// <summary>
 /// Recibos de pago a la cuenta de la habitacion (HotelReciboIngreso + HotelReciboDetalle), como UFrmMntRecibos de
@@ -87,6 +93,16 @@ public sealed class RepositorioRecibos
         if (clave is null) return Array.Empty<Recibo>();
         return Armar(cn, null, cn.Query<FilaRecibo>(SelRecibo + " WHERE Factura_id = @clave AND Habitacion = @habitacion ORDER BY NumeroRecibo",
             new { clave, habitacion }));
+    }
+
+    /// <summary>Un recibo por su numero (de la habitacion o del walk-in), para imprimirlo.</summary>
+    public ReciboImpreso? Impreso(long numero)
+    {
+        using var cn = _conexiones.Hotel();
+        var r = Armar(cn, null, cn.Query<FilaRecibo>(SelRecibo + " WHERE NumeroRecibo = @numero", new { numero })).SingleOrDefault();
+        if (r is null) return null;
+        var cliente = cn.ExecuteScalar<decimal?>("SELECT Cliente_id FROM HotelReciboIngreso WHERE NumeroRecibo = @numero", new { numero });
+        return new ReciboImpreso(ServicioEcf.Emisor(cn), r, cliente is > 0 ? (long)cliente : null, MontoEnLetras.Pesos(r.Monto));
     }
 
     private sealed class Cuenta

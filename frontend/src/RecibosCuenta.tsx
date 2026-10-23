@@ -72,14 +72,18 @@ export default function RecibosCuenta({ habitacion, saldo, anula, abierto, alCer
       montoUs: l.forma === DOLARES ? num(l.us) || null : null, noCheque: l.cheque || null, banco: l.banco || null,
     }))
     if (!window.confirm(`¿Registrar un recibo de ${dinero(total)} a la habitación ${habitacion}?`)) return
+    // como Delphi, el recibo se imprime al grabarlo; la pestana se abre antes de esperar a la API (si no, el navegador la bloquea)
+    const w = window.open('', '_blank')
     setEnviando(true)
     setError('')
     try {
-      await hacerRecibo(habitacion, concepto, pagos)
+      const r = await hacerRecibo(habitacion, concepto, pagos)
+      if (w) w.location.href = `/recibo/${r.numero}`
       alCerrar()
       cargar()
       alCambiar()
     } catch (e) {
+      w?.close()
       if (e instanceof SesionVencida) alError(e)
       else setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -137,7 +141,7 @@ export default function RecibosCuenta({ habitacion, saldo, anula, abierto, alCer
         <>
           <h3>Recibos de esta estadía</h3>
           <table className="tabla">
-            <thead><tr><th>No.</th><th>Fecha</th><th>Formas de pago</th><th className="num">Monto</th><th>Estado</th>{anula && <th></th>}</tr></thead>
+            <thead><tr><th>No.</th><th>Fecha</th><th>Formas de pago</th><th className="num">Monto</th><th>Estado</th><th></th></tr></thead>
             <tbody>
               {recibos.map((r) => (
                 <tr key={r.numero} className={r.estatus === 'Activo' ? '' : 'inactiva'}>
@@ -146,7 +150,10 @@ export default function RecibosCuenta({ habitacion, saldo, anula, abierto, alCer
                   <td>{r.pagos.map((p) => `${p.formaPagoNombre} ${dinero(p.monto)}`).join(' · ')}</td>
                   <td className="num">{dinero(r.monto)}</td>
                   <td>{r.estatus}{r.estatus === 'Activo' && r.posteado ? ' (en cuadre)' : ''}</td>
-                  {anula && <td>{r.estatus === 'Activo' && !r.posteado && <button type="button" className="secundario chico" onClick={() => anular(r)}>Anular</button>}</td>}
+                  <td className="acciones-fila">
+                    <button type="button" className="secundario chico" onClick={() => window.open(`/recibo/${r.numero}`, '_blank')}>Imprimir</button>
+                    {anula && r.estatus === 'Activo' && !r.posteado && <button type="button" className="secundario chico" onClick={() => anular(r)}>Anular</button>}
+                  </td>
                 </tr>
               ))}
             </tbody>

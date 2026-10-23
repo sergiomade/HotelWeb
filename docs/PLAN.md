@@ -381,3 +381,21 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
     sin QR; y un 401 de la API ahora dice "revise Parametro.ClaveApiEcf" en vez de "no llego".
 14. Desde 2026-10-23 (decision del usuario) el desarrollo y las pruebas van EN LA NUBE: HotelPruebas + https://132028211.net
     (testecf). La API local 8005 se apaga; Hotel_new queda de respaldo.
+15. CAMBIO de la etapa 10 (2026-10-23): el hotel trabaja sus datos EN LA NUBE (SQL en site4now) todo el tiempo: no se
+    instala IIS en el hotel. HotelWeb se publica en un hosting en la nube (probablemente el mismo de WebEncf,
+    132028211.net / SmarterASP), con HTTPS y su propia Jwt:Key; en el hotel solo navegador e impresoras (POS 80 mm y
+    carta). Las migraciones MIG_20-26 se pueden aplicar a la base real desde aqui (con respaldo). El usuario puede
+    visitar el hotel (San Francisco de Macoris) el fin de semana: alla, primera factura real e impresoras.
+    Falta saber: hosting y cuenta, la direccion (subdominio) de HotelWeb, donde esta la base Seguridad en la nube, y la
+    API de produccion (la 132028211.net esta en testecf).
+16. Kit de implementacion (2026-10-23): C:\Implementacion_HotelWeb: HotelWeb\app (paquete con la plantilla de
+    appsettings), migraciones\MIG_20..MIG_26 y GUIA_IMPLEMENTACION.md (respaldo, migraciones, secuencias, API de
+    produccion, sitio en SmarterASP con HTTPS, appsettings, impresoras, primera factura real, convivencia con Delphi).
+    Todo en SmarterASP: base del hotel, Seguridad, WebEncf y HotelWeb. Falta: que "nFinanciero" sea la base real del
+    hotel, la direccion del sitio y la API de produccion.
+17. Bases reales en SmarterASP (dato del usuario, 2026-10-23): la del hotel se llama "hotel" y la de usuarios
+    "hseguridad" (en el panel pueden llevar el prefijo de la cuenta, como db_aa9d01_hotelpruebas). Por ahora no se
+    trabaja sobre ellas.
+18. Impresos (2026-10-23): recibo de ingreso /recibo/{numero} en media carta (como ppReport3 de UFrmMntRecibos, con la
+    suma en letras de MontoEnLetras; sale solo al grabar el recibo) y confirmacion de reserva /reserva/{id} (como
+    ppReport2 de UFrmMntReservacion, mas los adelantos y el pendiente o saldo a favor).

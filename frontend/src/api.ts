@@ -455,6 +455,11 @@ export const buscarReservas = (desde: string, hasta: string, porSalida: boolean,
     `&buscar=${encodeURIComponent(texto)}${estado ? `&estado=${estado}` : ''}`)
 export const opcionesReserva = () => pedir<OpcionesReserva>('/api/reservas/opciones')
 export const obtenerReserva = (id: number) => pedir<Reserva>(`/api/reservas/${id}`)
+export interface ReservaImpresa {
+  emisor: { rnc: string; razonSocial: string; direccion: string; telefono: string | null }
+  reserva: Reserva
+}
+export const reservaImpresa = (id: number) => pedir<ReservaImpresa>(`/api/reservas/${id}/impresa`)
 export const disponibilidad = (entrada: string, salida: string, excluir?: number) =>
   pedir<Disponibilidad[]>(`/api/reservas/disponibilidad?entrada=${entrada}&salida=${salida}${excluir ? `&excluir=${excluir}` : ''}`)
 export const crearReserva = (d: DatosReserva) =>
@@ -574,6 +579,13 @@ export interface ReciboPago {
 export const recibosDeCuenta = (habitacion: number) => pedir<ReciboPago[]>(`/api/cuentas/${habitacion}/recibos`)
 export const hacerRecibo = (habitacion: number, concepto: string, pagos: PagoRecibo[]) =>
   pedir<ReciboPago>(`/api/cuentas/${habitacion}/recibos`, { method: 'POST', body: JSON.stringify({ concepto, pagos }) })
+export interface ReciboImpreso {
+  emisor: { rnc: string; razonSocial: string; direccion: string; telefono: string | null }
+  recibo: ReciboPago
+  clienteId: number | null
+  enLetras: string
+}
+export const reciboImpreso = (numero: number) => pedir<ReciboImpreso>(`/api/recibos/${numero}`)
 export const anularRecibo = (numero: number) => pedir<ReciboPago>(`/api/recibos/${numero}/anular`, { method: 'POST' })
 export const cargarACuenta = (habitacion: number, servicio: number, descripcion: string, cantidad: number, precio: number) =>
   pedir<CuentaHabitacion>(`/api/cuentas/${habitacion}/cargos`, { method: 'POST', body: JSON.stringify({ servicio, descripcion, cantidad, precio }) })

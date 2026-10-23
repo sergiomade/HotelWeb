@@ -2,6 +2,8 @@ using System.Data;
 using Dapper;
 using HotelWeb.Api.Catalogos;
 using HotelWeb.Api.Datos;
+using HotelWeb.Api.Ecf;
+using HotelWeb.Core.Ecf;
 using HotelWeb.Core.Reservas;
 
 namespace HotelWeb.Api.Reservas;
@@ -23,6 +25,9 @@ public sealed record Reserva(long Id, string Cliente, long? ClienteId, string? C
     public decimal Total => Lineas.Sum(l => l.Importe);
     public decimal TotalAdelantos => Adelantos.Where(a => a.Estatus == ReglasAdelanto.Activa).Sum(a => a.Monto);
 }
+
+/// <summary>La confirmacion de la reserva para imprimir (como ppReport2 de UFrmMntReservacion), con los adelantos.</summary>
+public sealed record ReservaImpresa(EmisorEcf Emisor, Reserva Reserva);
 
 public sealed record Opcion(int Id, string Nombre);
 
@@ -143,6 +148,13 @@ public sealed class RepositorioReservas
         public string? NombreMoneda { get; set; }
         public string? Estatus { get; set; }
         public string? Usuario { get; set; }
+    }
+
+    public ReservaImpresa? Impresa(long id)
+    {
+        if (Obtener(id) is not { } r) return null;
+        using var cn = _conexiones.Hotel();
+        return new ReservaImpresa(ServicioEcf.Emisor(cn), r);
     }
 
     public Reserva? Obtener(long id)
