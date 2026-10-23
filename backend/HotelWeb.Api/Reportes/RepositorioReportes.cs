@@ -24,6 +24,9 @@ public sealed record TipoResumen(string Tipo, int Cantidad, decimal Base, decima
 
 public sealed record ReporteComprobantes(IReadOnlyList<Comprobante> Lista, IReadOnlyList<TipoResumen> PorTipo);
 
+public sealed record ClienteReporte(long Numero, string Nombre, string? Identificacion, string? Telefono, string? Direccion, string? Contacto,
+    string? Correo, int? Comprobante, decimal LimiteCredito, bool Itbis, bool Propina, string? Estatus);
+
 public sealed record FacturaCancelada(int Cancelacion, DateTime FechaCancelacion, long Factura, int? Habitacion, string? Cliente, decimal Cargos,
     string? Autoriza, string? Usuario, string? Motivo);
 
@@ -180,6 +183,32 @@ public sealed class RepositorioReportes
     {
         var r = (rnc ?? "").Trim();
         return r == "" || r.All(c => c == '0') ? null : r;
+    }
+
+    public const int MaximoClientes = 2000;
+
+    /// <summary>El maestro de clientes (CxcCliente, como UrptMaestroClientes de Delphi): por nombre, RNC o numero; solo con RNC o
+    /// solo con credito. Hasta 2000, por nombre.</summary>
+    public IReadOnlyList<ClienteReporte> Clientes(string? texto, bool conRnc, bool conCredito, bool inactivos)
+    {
+        var t = (texto ?? "").Trim();
+        using var cn = _conexiones.Hotel();
+        return cn.Query<ClienteReporte>($"""
+            SELECT TOP {MaximoClientes} CAST(NumeroCliente AS bigint) AS Numero, RTRIM(Nombre) AS Nombre,
+                   CASE WHEN REPLACE(RTRIM(ISNULL(RNC, '')), '0', '') <> '' THEN RTRIM(RNC)
+                        WHEN REPLACE(RTRIM(ISNULL(Cedula, '')), '0', '') <> '' THEN RTRIM(Cedula)
+                        ELSE NULLIF(RTRIM(Passaporte), '') END AS Identificacion,
+                   RTRIM(Telefono) AS Telefono, RTRIM(Direccion) AS Direccion, RTRIM(Contacto) AS Contacto, RTRIM(E_mail) AS Correo,
+                   CodigoCompFiscal AS Comprobante, ISNULL(LimiteCredito, 0) AS LimiteCredito, ISNULL(Itbis, 1) AS Itbis, ISNULL(Propina, 1) AS Propina,
+                   RTRIM(Estatus) AS Estatus
+            FROM CxcCliente WITH (NOLOCK)
+            WHERE NumeroCliente > 2
+              AND (@inactivos = 1 OR ISNULL(RTRIM(Estatus), '') <> 'Inactivo')
+              AND (@conRnc = 0 OR REPLACE(RTRIM(ISNULL(RNC, '')), '0', '') <> '')
+              AND (@conCredito = 0 OR ISNULL(LimiteCredito, 0) > 0)
+              AND (@t = '' OR Nombre LIKE '%' + @t + '%' OR RNC LIKE @t + '%' OR Cedula LIKE @t + '%' OR CAST(NumeroCliente AS varchar(20)) = @t)
+            ORDER BY Nombre
+            """, new { t = new DbString { Value = t, IsAnsi = true, Length = 60 }, conRnc, conCredito, inactivos }).ToList();
     }
 
     private sealed class FilaCancelada

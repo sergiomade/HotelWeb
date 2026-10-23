@@ -1,13 +1,18 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
-  dinero, fecha, hoyIso, reporteCanceladas, reporteComprobantes, reporteVentasCafeteria, reporteVentasHotel, SesionVencida,
-  type Comprobante, type FacturaCancelada, type ReporteComprobantes, type VentaCafeteria, type VentaHotel,
+  buscarReservas, dinero, fecha, hoyIso, obtenerRack, reporteCanceladas, reporteClientes, reporteComprobantes, reporteVentasCafeteria,
+  reporteVentasHotel, SesionVencida,
+  type ClienteReporte, type Comprobante, type FacturaCancelada, type HabitacionRack, type ReporteComprobantes, type ReservaResumen,
+  type VentaCafeteria, type VentaHotel,
 } from './api'
 
-type Pestana = 'hotel' | 'cafeteria' | 'comprobantes' | 'canceladas'
+type Pestana = 'hotel' | 'cafeteria' | 'comprobantes' | 'canceladas' | 'ocupadas' | 'proyeccion' | 'clientes'
 const NOMBRES: Record<Pestana, string> = {
   hotel: 'Ventas del hotel', cafeteria: 'Ventas de la cafetería', comprobantes: 'Comprobantes (NCF)', canceladas: 'Canceladas sin cobro',
+  ocupadas: 'Habitaciones ocupadas', proyeccion: 'Proyección de reservas', clientes: 'Clientes',
 }
+// estos no van por rango de fechas
+const SIN_FECHAS: Pestana[] = ['ocupadas', 'clientes']
 
 /** Una columna de un reporte: el titulo, como se ve, el valor para Excel y si se suma. */
 interface Columna<T> {
@@ -38,15 +43,18 @@ export default function Reportes({ alVencer }: { alVencer: () => void }) {
           <button key={x} type="button" role="tab" aria-selected={p === x} className={p === x ? 'activo' : ''} onClick={() => setP(x)}>{NOMBRES[x]}</button>
         ))}
       </div>
-      <div className="filtros no-imprimir">
+      {!SIN_FECHAS.includes(p) && <div className="filtros no-imprimir">
         <label className="corto">Desde<input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></label>
         <label className="corto">hasta<input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} /></label>
         <button type="button" className="secundario" onClick={() => setDesde(hasta)}>Solo un día</button>
-      </div>
+      </div>}
       {p === 'hotel' && <VentasHotel desde={desde} hasta={hasta} alVencer={alVencer} />}
       {p === 'cafeteria' && <VentasCafeteria desde={desde} hasta={hasta} alVencer={alVencer} />}
       {p === 'comprobantes' && <Comprobantes desde={desde} hasta={hasta} alVencer={alVencer} />}
       {p === 'canceladas' && <Canceladas desde={desde} hasta={hasta} alVencer={alVencer} />}
+      {p === 'ocupadas' && <Ocupadas alVencer={alVencer} />}
+      {p === 'proyeccion' && <Proyeccion desde={desde} hasta={hasta} alVencer={alVencer} />}
+      {p === 'clientes' && <Clientes alVencer={alVencer} />}
     </section>
   )
 }
@@ -248,6 +256,166 @@ function Canceladas({ desde, hasta, alVencer }: { desde: string; hasta: string; 
     <>
       <Estado e={r.datos ? 'ok' : null} d={r} />
       {r.datos && <Tabla titulo="Facturas canceladas sin cobro" desde={desde} hasta={hasta} filas={filas} columnas={columnas} archivo="canceladas" />}
+    </>
+  )
+}
+
+/**
+ * Habitaciones ocupadas hoy, como Stp_ReportedeHabitacionesOcupadas: huesped, cliente, entrada, salida, personas y el
+ * balance. El balance sale del Hospedaje (el calculo exacto de la cuenta; Delphi multiplicaba todo por 1.28).
+ * Delphi preguntaba si incluir montos y nombres: aqui es una casilla.
+ */
+function Ocupadas({ alVencer }: { alVencer: () => void }) {
+  const [conMontos, setConMontos] = useState(true)
+  const cargar = useCallback(() => obtenerRack(), [])
+  const hoy = hoyIso()
+  const r = useReporte(cargar, hoy, hoy, alVencer)
+  const filas = (r.datos?.habitaciones ?? []).filter((h) => h.situacion === 'Ocupada').sort((a, b) => a.numero - b.numero)
+  const columnas: Columna<HabitacionRack>[] = [
+    { titulo: 'Hab.', ver: (f) => f.numero, csv: (f) => String(f.numero) },
+    { titulo: 'Tipo', ver: (f) => f.tipo, csv: (f) => t(f.tipo) },
+    ...(conMontos ? [
+      { titulo: 'Huésped', ver: (f: HabitacionRack) => f.huesped, csv: (f: HabitacionRack) => t(f.huesped) },
+      { titulo: 'Cliente', ver: (f: HabitacionRack) => f.cliente, csv: (f: HabitacionRack) => t(f.cliente) },
+    ] : []),
+    { titulo: 'Entrada', ver: (f) => fecha(f.fechaEntrada, true), csv: (f) => t(f.fechaEntrada?.slice(0, 10)) },
+    {
+      titulo: 'Salida',
+      ver: (f) => <span className={f.avisos.salidaVencida ? 'error' : f.avisos.saleHoy ? 'alerta' : ''}>{fecha(f.fechaSalida, true)}</span>,
+      csv: (f) => t(f.fechaSalida?.slice(0, 10)),
+    },
+    { titulo: 'Personas', ver: (f) => f.personas, csv: (f) => String(f.personas ?? ''), num: true },
+    { titulo: 'Crédito', ver: (f) => (f.credito ? 'Sí' : ''), csv: (f) => (f.credito ? 'Si' : '') },
+    ...(conMontos ? [m<HabitacionRack>('Balance', (f) => f.saldo ?? 0)] : []),
+  ]
+  const salen = filas.filter((f) => f.avisos.saleHoy).length
+  const vencidas = filas.filter((f) => f.avisos.salidaVencida).length
+  return (
+    <>
+      <label className="check no-imprimir">
+        <input type="checkbox" checked={conMontos} onChange={(e) => setConMontos(e.target.checked)} /> Con nombres y balances
+      </label>
+      <Estado e={r.datos ? 'ok' : null} d={r} />
+      {r.datos && (
+        <Tabla titulo="Habitaciones ocupadas" desde={hoy} hasta={hoy} filas={filas} columnas={columnas} archivo="ocupadas"
+               pie={<p className="tenue">{filas.length} ocupadas · {salen} salen hoy{vencidas ? ` · ${vencidas} con la salida vencida` : ''}</p>} />
+      )}
+    </>
+  )
+}
+
+const ESTADOS_RESERVA: [number, string][] = [[0, 'Todos'], [1, 'Activa'], [2, 'Cancelada'], [3, 'Hospedado']]   // EstadoReserva de la API
+
+/** Proyeccion de reservaciones (Stp_ProyecciondeReservaciones): las que llegan, o las que salen, en el rango, con el resumen por dia. */
+function Proyeccion({ desde, hasta, alVencer }: { desde: string; hasta: string; alVencer: () => void }) {
+  const [porSalida, setPorSalida] = useState(false)
+  const [estado, setEstado] = useState(0)
+  const cargar = useCallback((d: string, h: string) => buscarReservas(d, h, porSalida, '', estado), [porSalida, estado])
+  const r = useReporte(cargar, desde, hasta, alVencer)
+  const filas = (r.datos ?? []) as ReservaResumen[]
+  const dia = (f: ReservaResumen) => (porSalida ? f.salida : f.entrada)
+  const otro = (f: ReservaResumen) => (porSalida ? f.entrada : f.salida)
+  const porDia = useMemo(() => {
+    const dias = new Map<string, { reservas: number; habitaciones: number }>()
+    for (const f of filas) {
+      const k = (porSalida ? f.salida : f.entrada).slice(0, 10)
+      const x = dias.get(k) ?? { reservas: 0, habitaciones: 0 }
+      x.reservas++
+      x.habitaciones += f.cantidadHabitaciones
+      dias.set(k, x)
+    }
+    return [...dias.entries()].sort(([a], [b]) => a.localeCompare(b))
+  }, [filas, porSalida])
+  const columnas: Columna<ReservaResumen>[] = [
+    { titulo: porSalida ? 'Salida' : 'Llegada', ver: (f) => fecha(dia(f), true), csv: (f) => dia(f).slice(0, 10) },
+    { titulo: 'Reserva', ver: (f) => f.id, csv: (f) => String(f.id) },
+    {
+      titulo: 'Cliente',
+      ver: (f) => <>{f.cliente}{f.huesped && f.huesped !== f.cliente && <span className="tenue fila-sub">{f.huesped}</span>}</>,
+      csv: (f) => f.cliente,
+    },
+    { titulo: 'Habitaciones', ver: (f) => f.habitaciones, csv: (f) => t(f.habitaciones) },
+    { titulo: 'Cant.', ver: (f) => f.cantidadHabitaciones, csv: (f) => String(f.cantidadHabitaciones), num: true },
+    { titulo: porSalida ? 'Llegada' : 'Salida', ver: (f) => fecha(otro(f), true), csv: (f) => otro(f).slice(0, 10) },
+    { titulo: 'Noches', ver: (f) => f.noches, csv: (f) => String(f.noches), num: true },
+    { titulo: 'Teléfono', ver: (f) => f.telefono, csv: (f) => t(f.telefono) },
+    { titulo: 'Estado', ver: (f) => f.estadoNombre, csv: (f) => f.estadoNombre },
+    m('Adelantos', (f) => f.adelantos),
+  ]
+  const resumen = porDia.length > 0 && (
+    <table className="tabla reporte-resumen">
+      <thead><tr><th>Día</th><th className="num">Reservas</th><th className="num">Habitaciones</th></tr></thead>
+      <tbody>
+        {porDia.map(([d, x]) => <tr key={d}><td>{fecha(d, true)}</td><td className="num">{x.reservas}</td><td className="num">{x.habitaciones}</td></tr>)}
+      </tbody>
+    </table>
+  )
+  return (
+    <>
+      <div className="filtros no-imprimir">
+        <div className="segmentado" role="group" aria-label="Por">
+          <button type="button" className={!porSalida ? 'activo' : ''} onClick={() => setPorSalida(false)}>Por llegada</button>
+          <button type="button" className={porSalida ? 'activo' : ''} onClick={() => setPorSalida(true)}>Por salida</button>
+        </div>
+        <label className="corto">Estado
+          <select value={estado} onChange={(e) => setEstado(Number(e.target.value))}>
+            {ESTADOS_RESERVA.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
+          </select>
+        </label>
+      </div>
+      <Estado e={r.datos ? 'ok' : null} d={r} />
+      {r.datos && (
+        <Tabla titulo={porSalida ? 'Salidas programadas' : 'Reservaciones por llegada'} desde={desde} hasta={hasta} filas={filas}
+               columnas={columnas} archivo={porSalida ? 'salidas' : 'llegadas'} pie={resumen} />
+      )}
+    </>
+  )
+}
+
+const COMPROBANTE: Record<number, string> = { 1: 'E31', 2: 'E32', 13: 'E44', 14: 'E45' }
+
+/** El maestro de clientes (CxcCliente): por nombre, RNC o numero, solo con RNC o con credito. */
+function Clientes({ alVencer }: { alVencer: () => void }) {
+  const [texto, setTexto] = useState('')
+  const [conRnc, setConRnc] = useState(false)
+  const [conCredito, setConCredito] = useState(false)
+  const [inactivos, setInactivos] = useState(false)
+  const [buscar, setBuscar] = useState('')
+  useEffect(() => {
+    const h = setTimeout(() => setBuscar(texto.trim()), 400)
+    return () => clearTimeout(h)
+  }, [texto])
+  const cargar = useCallback(() => reporteClientes(buscar, conRnc, conCredito, inactivos), [buscar, conRnc, conCredito, inactivos])
+  const hoy = hoyIso()
+  const r = useReporte(cargar, hoy, hoy, alVencer)
+  const filas = (r.datos ?? []) as ClienteReporte[]
+  const sn = (v: boolean) => (v ? 'Sí' : 'No')
+  const columnas: Columna<ClienteReporte>[] = [
+    { titulo: 'Número', ver: (f) => f.numero, csv: (f) => String(f.numero) },
+    { titulo: 'Nombre', ver: (f) => f.nombre, csv: (f) => f.nombre },
+    { titulo: 'RNC / cédula', ver: (f) => f.identificacion, csv: (f) => t(f.identificacion) },
+    { titulo: 'Teléfono', ver: (f) => f.telefono, csv: (f) => t(f.telefono) },
+    { titulo: 'Contacto', ver: (f) => f.contacto, csv: (f) => t(f.contacto) },
+    { titulo: 'Correo', ver: (f) => f.correo, csv: (f) => t(f.correo) },
+    { titulo: 'Dirección', ver: (f) => f.direccion, csv: (f) => t(f.direccion) },
+    { titulo: 'e-CF', ver: (f) => COMPROBANTE[f.comprobante ?? 0] ?? '', csv: (f) => COMPROBANTE[f.comprobante ?? 0] ?? '' },
+    { titulo: 'ITBIS / propina', ver: (f) => `${sn(f.itbis)} / ${sn(f.propina)}`, csv: (f) => `${sn(f.itbis)} / ${sn(f.propina)}` },
+    m('Límite de crédito', (f) => f.limiteCredito, false),
+    { titulo: 'Estado', ver: (f) => f.estatus, csv: (f) => t(f.estatus) },
+  ]
+  return (
+    <>
+      <div className="filtros no-imprimir">
+        <label className="largo">Buscar<input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Nombre, RNC, cédula o número" /></label>
+        <label className="check"><input type="checkbox" checked={conRnc} onChange={(e) => setConRnc(e.target.checked)} /> Solo con RNC</label>
+        <label className="check"><input type="checkbox" checked={conCredito} onChange={(e) => setConCredito(e.target.checked)} /> Solo con crédito</label>
+        <label className="check"><input type="checkbox" checked={inactivos} onChange={(e) => setInactivos(e.target.checked)} /> Con los inactivos</label>
+      </div>
+      <Estado e={r.datos ? 'ok' : null} d={r} />
+      {r.datos && (
+        <Tabla titulo="Maestro de clientes" desde={hoy} hasta={hoy} filas={filas} columnas={columnas} archivo="clientes"
+               pie={filas.length >= 2000 && <p className="alerta no-imprimir">Se muestran los primeros 2,000: use los filtros para ver el resto.</p>} />
+      )}
     </>
   )
 }

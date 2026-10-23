@@ -303,3 +303,9 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   Hallazgo: en la cafeteria de Delphi 1,489 de 1,508 pagos con tarjeta (desde 2025-06) son MAYORES que el total, casi
   siempre por centavos y a veces por tarjeta mal digitada (factura 10595: 2,355,623 por 3,750); sus reportes los toman
   como "propina voluntaria" y el cambio de turno los suma. La web ya no lo permite (8b) y el reporte marca esas facturas.
+- Parte 9c HECHA (2026-10-23, sin commit): en Reportes, tres pestanas mas, con imprimir y Excel:
+  habitaciones ocupadas (del Hospedaje/rack: el balance exacto de la cuenta; Stp_ReportedeHabitacionesOcupadas
+  multiplicaba todo por 1.28; casilla "con nombres y balances" como la pregunta de Delphi), proyeccion de reservas
+  (por llegada o por salida, como Stp_ProyecciondeReservaciones, con el resumen por dia; usa `/api/reservas`) y el
+  maestro de clientes (`/api/reportes/clientes`: buscar, solo con RNC, solo con credito, con los inactivos; hasta 2000).
+  UrptMaestroClientes de Delphi no esta en ningun menu.

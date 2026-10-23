@@ -1084,3 +1084,13 @@ export const reporteVentasHotel = (desde: string, hasta: string) => pedir<VentaH
 export const reporteVentasCafeteria = (desde: string, hasta: string) => pedir<VentaCafeteria[]>(`/api/reportes/ventas-cafeteria?${rango(desde, hasta)}`)
 export const reporteComprobantes = (desde: string, hasta: string) => pedir<ReporteComprobantes>(`/api/reportes/comprobantes?${rango(desde, hasta)}`)
 export const reporteCanceladas = (desde: string, hasta: string) => pedir<FacturaCancelada[]>(`/api/reportes/canceladas?${rango(desde, hasta)}`)
+
+// ---- etapa 9c: reportes del hospedaje ----
+
+export interface ClienteReporte {
+  numero: number; nombre: string; identificacion: string | null; telefono: string | null; direccion: string | null; contacto: string | null
+  correo: string | null; comprobante: number | null; limiteCredito: number; itbis: boolean; propina: boolean; estatus: string | null
+}
+
+export const reporteClientes = (texto: string, conRnc: boolean, conCredito: boolean, inactivos: boolean) =>
+  pedir<ClienteReporte[]>(`/api/reportes/clientes?texto=${encodeURIComponent(texto)}&conRnc=${conRnc}&conCredito=${conCredito}&inactivos=${inactivos}`)

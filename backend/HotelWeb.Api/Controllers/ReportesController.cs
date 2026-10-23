@@ -22,6 +22,10 @@ public sealed class ReportesController : ControllerBase
     [HttpGet("comprobantes")]
     public ActionResult<ReporteComprobantes> Comprobantes(DateTime desde, DateTime hasta) => Hacer(() => _reportes.Comprobantes(desde, hasta));
 
+    [HttpGet("clientes")]
+    public ActionResult<IReadOnlyList<ClienteReporte>> Clientes(string? texto, bool conRnc = false, bool conCredito = false, bool inactivos = false) =>
+        Hacer(() => _reportes.Clientes(texto, conRnc, conCredito, inactivos));
+
     [HttpGet("canceladas")]
     public ActionResult<IReadOnlyList<FacturaCancelada>> Canceladas(DateTime desde, DateTime hasta) => Hacer(() => _reportes.Canceladas(desde, hasta));
 
