@@ -2,19 +2,21 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import Espera from './Espera'
 import Fondo from './Fondo'
 import {
-  crearNota, dinero, fecha, hoyIso, listarFacturas, prepararNota, reenviarEcf, reenviarNota, reenviarWalkIn, SesionVencida,
+  crearNota, dinero, fecha, hoyIso, listarFacturas, prepararNota, reenviarCafeteria, reenviarEcf, reenviarNota, reenviarWalkIn, SesionVencida,
   type FacturaCerrada, type PreparacionNota, type ResultadoNota,
 } from './api'
 
 const esNota = (f: FacturaCerrada) => f.origen.startsWith('Nota')
-const origenRuta = (f: FacturaCerrada) => (f.walkIn ? 'walkin' : 'hospedaje')
+const esCafeteria = (f: FacturaCerrada) => f.origen.endsWith('Cafeteria')
+const origenRuta = (f: FacturaCerrada) => (esCafeteria(f) ? 'cafeteria' : f.walkIn ? 'walkin' : 'hospedaje')
 const clave = (f: FacturaCerrada) => `${f.origen}-${f.numero}`
 
 /**
- * Las facturas cerradas (check-out y walk-in) y sus notas de credito, con su estado en la DGII: reimprimir, reenviar
- * las que no llegaron y hacer una nota de credito (etapa 7).
+ * Las facturas cerradas y sus notas de credito, con su estado en la DGII: reimprimir, reenviar las que no llegaron y
+ * hacer una nota de credito (etapas 7 y 8d). Ambito hotel: check-out y walk-in (Recepcion); cafeteria: lo cobrado en
+ * las mesas (Cafeteria > Facturas).
  */
-export default function Facturas({ alVencer }: { alVencer: () => void }) {
+export default function Facturas({ alVencer, ambito = 'hotel' }: { alVencer: () => void; ambito?: 'hotel' | 'cafeteria' }) {
   const [desde, setDesde] = useState(() => hoyIso(-7))
   const [hasta, setHasta] = useState(() => hoyIso())
   const [texto, setTexto] = useState('')
@@ -33,8 +35,8 @@ export default function Facturas({ alVencer }: { alVencer: () => void }) {
   const cargar = useCallback(() => {
     setCargando(true)
     setError('')
-    listarFacturas(desde, hasta, texto.trim()).then(setLista).catch(manejar).finally(() => setCargando(false))
-  }, [desde, hasta, texto, manejar])
+    listarFacturas(desde, hasta, texto.trim(), ambito).then(setLista).catch(manejar).finally(() => setCargando(false))
+  }, [desde, hasta, texto, manejar, ambito])
 
   // al cambiar las fechas se busca solo; el texto, al dejar de escribir
   useEffect(() => {
@@ -49,7 +51,8 @@ export default function Facturas({ alVencer }: { alVencer: () => void }) {
     setAviso('')
     setError('')
     try {
-      const e = await (esNota(f) ? reenviarNota(origenRuta(f), f.numero) : f.walkIn ? reenviarWalkIn(f.numero) : reenviarEcf(f.numero))
+      const e = await (esNota(f) ? reenviarNota(origenRuta(f), f.numero) : esCafeteria(f) ? reenviarCafeteria(f.numero)
+        : f.walkIn ? reenviarWalkIn(f.numero) : reenviarEcf(f.numero))
       setLista((l) => l?.map((x) => (clave(x) === clave(f) ? { ...x, dgii: e } : x)) ?? null)
       setAviso(`${e.encf}: ${e.estado}${e.mensaje ? ` · ${e.mensaje}` : ''}`)
     } catch (e) {
@@ -60,7 +63,8 @@ export default function Facturas({ alVencer }: { alVencer: () => void }) {
   }
 
   function imprimir(f: FacturaCerrada) {
-    const ruta = esNota(f) ? `/nota/${origenRuta(f)}/${f.numero}` : f.walkIn ? `/walkin/${f.numero}` : `/factura/${f.numero}`
+    const ruta = esNota(f) ? `/nota/${origenRuta(f)}/${f.numero}` : esCafeteria(f) ? `/cafeteria/${f.numero}`
+      : f.walkIn ? `/walkin/${f.numero}` : `/factura/${f.numero}`
     window.open(ruta, '_blank')
   }
 
@@ -73,7 +77,7 @@ export default function Facturas({ alVencer }: { alVencer: () => void }) {
         <label className="corto">Desde<input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} /></label>
         <label className="corto">hasta<input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} /></label>
         <label className="largo">Buscar
-          <input placeholder="Habitación, número, e-NCF o nombre" value={texto} onChange={(e) => setTexto(e.target.value)} />
+          <input placeholder={ambito === 'cafeteria' ? 'Número, mesa, habitación, e-NCF o nombre' : 'Habitación, número, e-NCF o nombre'} value={texto} onChange={(e) => setTexto(e.target.value)} />
         </label>
         <button type="button" className="secundario" onClick={cargar} disabled={cargando}>{cargando ? 'Consultando la DGII...' : 'Actualizar'}</button>
       </div>
@@ -83,19 +87,20 @@ export default function Facturas({ alVencer }: { alVencer: () => void }) {
       <div className="tabla-marco">
         <table className="tabla catalogo">
           <thead>
-            <tr><th className="num">Número</th><th>Fecha</th><th className="num">Hab.</th><th>Cliente / huésped</th><th>e-NCF</th><th className="num">Total</th><th>DGII</th><th></th></tr>
+            <tr><th className="num">Número</th><th>Fecha</th><th className="num">{ambito === 'cafeteria' ? 'Mesa / hab.' : 'Hab.'}</th><th>{ambito === 'cafeteria' ? 'Cliente' : 'Cliente / huésped'}</th><th>e-NCF</th><th className="num">Total</th><th>DGII</th><th></th></tr>
           </thead>
           <tbody>
             {lista?.map((f) => (
               <tr key={clave(f)} className={esNota(f) ? 'fila-nota' : ''}>
                 <td className="num">{f.numero}</td>
                 <td>{fecha(f.fecha, true)}</td>
-                <td className="num">{esNota(f) ? <span className="tenue">N/C</span> : f.walkIn ? <span className="tenue">Walk-in</span> : f.habitacion}</td>
-                <td><strong>{f.cliente}</strong>{f.huesped && f.huesped !== f.cliente && <span className="tenue fila-sub">{f.huesped}</span>}</td>
+                <td className="num">{esNota(f) ? <span className="tenue">N/C</span> : f.walkIn ? <span className="tenue">Walk-in</span>
+                  : esCafeteria(f) ? <>{f.huesped}{f.habitacion > 0 && <span className="tenue fila-sub">Hab. {f.habitacion}</span>}</> : f.habitacion}</td>
+                <td><strong>{f.cliente}</strong>{!esCafeteria(f) && f.huesped && f.huesped !== f.cliente && <span className="tenue fila-sub">{f.huesped}</span>}</td>
                 <td>{f.encf || <span className="tenue">—</span>}{f.modifica && <span className="tenue fila-sub">Modifica {f.modifica}</span>}</td>
                 <td className="num">{esNota(f) ? `-${dinero(f.total)}` : dinero(f.total)}</td>
                 <td>
-                  {f.transferida ? <span className="tenue">Transferida (no va)</span>
+                  {f.transferida ? <span className="tenue">{esCafeteria(f) ? `A la habitación ${f.habitacion} (sin e-CF)` : 'Transferida (no va)'}</span>
                     : !f.dgii ? <span className="tenue">Sin e-NCF</span>
                     : <span className={f.dgii.aceptado ? 'ok-texto' : 'error'} title={f.dgii.mensaje ?? ''}>{f.dgii.estado}</span>}
                   {f.dgii?.mensaje && !f.dgii.aceptado && <span className="tenue fila-sub">{f.dgii.mensaje}</span>}
@@ -111,7 +116,7 @@ export default function Facturas({ alVencer }: { alVencer: () => void }) {
                 </td>
               </tr>
             ))}
-            {lista?.length === 0 && <tr><td colSpan={8} className="tenue">No hay facturas cerradas en esas fechas.</td></tr>}
+            {lista?.length === 0 && <tr><td colSpan={8} className="tenue">{ambito === 'cafeteria' ? 'No hay facturas cobradas en esas fechas.' : 'No hay facturas cerradas en esas fechas.'}</td></tr>}
             {!lista && cargando && <tr><td colSpan={8} className="tenue">Consultando las facturas y la DGII...</td></tr>}
           </tbody>
         </table>
@@ -147,7 +152,7 @@ function NotaCredito({ factura, alCerrar, alVencer }: {
   const [claveResp, setClaveResp] = useState('')
   const [error, setError] = useState('')
   const [enviando, setEnviando] = useState(false)
-  const origen = factura.walkIn ? 'walkin' : 'hospedaje'
+  const origen = origenRuta(factura)
 
   const manejar = useCallback((e: unknown) => {
     if (e instanceof SesionVencida) alVencer()
@@ -205,7 +210,7 @@ function NotaCredito({ factura, alCerrar, alVencer }: {
         {p && (
           <form onSubmit={enviar} className="grupo-cargo">
             <dl className="datos-lista">
-              <dt>Factura</dt><dd>{factura.walkIn ? 'Walk-in' : 'Check-out'} #{p.factura} · {fecha(p.fecha, true)} · hace {p.dias} {p.dias === 1 ? 'día' : 'días'}</dd>
+              <dt>Factura</dt><dd>{esCafeteria(factura) ? `Cafetería (${factura.huesped})` : factura.walkIn ? 'Walk-in' : 'Check-out'} #{p.factura} · {fecha(p.fecha, true)} · hace {p.dias} {p.dias === 1 ? 'día' : 'días'}</dd>
               <dt>Cliente</dt><dd>{p.cliente}{p.rnc && p.rnc.replace(/0/g, '') ? ` · ${p.rnc}` : ''}</dd>
               <dt>Total</dt><dd>{dinero(p.total)} <span className="tenue">({dinero(p.subTotal)} + ITBIS {dinero(p.itbis)}{p.propina ? ` + propina ${dinero(p.propina)}` : ''})</span></dd>
               {p.notas.length > 0 && <><dt>Notas previas</dt><dd>{p.notas.map((n) => `${n.encf ?? '#' + n.numero} por ${dinero(n.total)}`).join(', ')}</dd></>}

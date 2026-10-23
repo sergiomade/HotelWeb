@@ -149,7 +149,7 @@ public sealed class RepositorioCheckout
     /// Las facturas cerradas (HotelTmpFactura) de un rango de fechas, las mas nuevas primero, con su estado en la DGII.
     /// Texto: numero de habitacion, de factura, e-NCF o parte del nombre.
     /// </summary>
-    public async Task<IReadOnlyList<FacturaCerrada>> Facturas(DateTime desde, DateTime hasta, string? texto, ServicioEcf ecf)
+    public async Task<IReadOnlyList<FacturaCerrada>> Facturas(DateTime desde, DateTime hasta, string? texto, ServicioEcf ecf, bool cafeteria = false)
     {
         if (hasta.Date < desde.Date) throw new ErrorCatalogo("La fecha final es antes de la inicial.");
         if ((hasta.Date - desde.Date).TotalDays > 62) throw new ErrorCatalogo("Escoja a lo sumo dos meses.");
@@ -157,27 +157,36 @@ public sealed class RepositorioCheckout
         List<(FacturaCerrada F, FacturaEcf E)> filas;
         using (var cn = _conexiones.Hotel())
         {
-            filas = cn.Query<(decimal Numero, DateTime Fecha, decimal Hab, string? Cliente, string? Huesped, string? Ncf, string? Rnc,
-                    decimal? SubTotal, decimal? Itbis, decimal? Propina, bool? Transferida)>("""
-                SELECT TOP 500 f.Factura_id, f.Fecha, f.Habitacion_id, RTRIM(c.Nombre), RTRIM(f.Huesped), RTRIM(f.NCF), RTRIM(f.RNC),
-                       f.SubTotal, f.Itbis, f.Propina, f.Transferida
-                FROM HotelTmpFactura f WITH (NOLOCK) LEFT JOIN CxcCliente c WITH (NOLOCK) ON c.NumeroCliente = f.Cliente_id
-                WHERE f.Fecha >= @desde AND f.Fecha < @hasta
-                  AND (@t IS NULL OR RTRIM(f.NCF) = @t OR CAST(f.Habitacion_id AS varchar(20)) = @t OR CAST(f.Factura_id AS varchar(20)) = @t
-                       OR c.Nombre LIKE '%' + @t + '%' OR f.Huesped LIKE '%' + @t + '%')
-                ORDER BY f.Factura_id DESC
-                """, new { desde = desde.Date, hasta = hasta.Date.AddDays(1), t = A(t, 60) })
-                .Select(x =>
-                {
-                    var subtotal = x.SubTotal ?? 0;
-                    var e = new FacturaEcf(x.Ncf ?? "", (long)x.Numero, x.Fecha.Date, x.Rnc, x.Cliente, subtotal, x.Itbis ?? 0, x.Propina ?? 0,
-                        false, Array.Empty<ItemEcf>());
-                    return (new FacturaCerrada((long)x.Numero, x.Fecha, (int)x.Hab, x.Cliente, x.Huesped, x.Ncf, e.Total,
-                        x.Transferida == true, null), e);
-                }).ToList();
-            // los walk-in del mismo rango (numeran aparte)
-            filas.AddRange(RepositorioWalkIn.Lista(cn, desde, hasta, t));
-            filas.AddRange(RepositorioNotas.Lista(cn, desde, hasta, t));
+            if (cafeteria)
+            {
+                // la cafeteria va en su propia lista: sus facturas (FaTmpFactura) y sus notas (faFacturaNC)
+                filas = Cafeteria.RepositorioCafeteria.Lista(cn, desde, hasta, t);
+                filas.AddRange(RepositorioNotas.ListaCafeteria(cn, desde, hasta, t));
+            }
+            else
+            {
+                filas = cn.Query<(decimal Numero, DateTime Fecha, decimal Hab, string? Cliente, string? Huesped, string? Ncf, string? Rnc,
+                        decimal? SubTotal, decimal? Itbis, decimal? Propina, bool? Transferida)>("""
+                    SELECT TOP 500 f.Factura_id, f.Fecha, f.Habitacion_id, RTRIM(c.Nombre), RTRIM(f.Huesped), RTRIM(f.NCF), RTRIM(f.RNC),
+                           f.SubTotal, f.Itbis, f.Propina, f.Transferida
+                    FROM HotelTmpFactura f WITH (NOLOCK) LEFT JOIN CxcCliente c WITH (NOLOCK) ON c.NumeroCliente = f.Cliente_id
+                    WHERE f.Fecha >= @desde AND f.Fecha < @hasta
+                      AND (@t IS NULL OR RTRIM(f.NCF) = @t OR CAST(f.Habitacion_id AS varchar(20)) = @t OR CAST(f.Factura_id AS varchar(20)) = @t
+                           OR c.Nombre LIKE '%' + @t + '%' OR f.Huesped LIKE '%' + @t + '%')
+                    ORDER BY f.Factura_id DESC
+                    """, new { desde = desde.Date, hasta = hasta.Date.AddDays(1), t = A(t, 60) })
+                    .Select(x =>
+                    {
+                        var subtotal = x.SubTotal ?? 0;
+                        var e = new FacturaEcf(x.Ncf ?? "", (long)x.Numero, x.Fecha.Date, x.Rnc, x.Cliente, subtotal, x.Itbis ?? 0, x.Propina ?? 0,
+                            false, Array.Empty<ItemEcf>());
+                        return (new FacturaCerrada((long)x.Numero, x.Fecha, (int)x.Hab, x.Cliente, x.Huesped, x.Ncf, e.Total,
+                            x.Transferida == true, null), e);
+                    }).ToList();
+                // los walk-in del mismo rango (numeran aparte)
+                filas.AddRange(RepositorioWalkIn.Lista(cn, desde, hasta, t));
+                filas.AddRange(RepositorioNotas.Lista(cn, desde, hasta, t));
+            }
         }
         var estados = await ecf.Estados(filas.Where(x => !x.F.Transferida).Select(x => x.E).ToList());
         return filas.Select(x => x.F with { Dgii = x.F.Encf is { } e && estados.TryGetValue(e, out var s) ? s : null })

@@ -50,3 +50,34 @@ public class NotaCreditoEcfTests
         Assert.NotNull(NotaCreditoEcf.Validar(new NotaCredito("E340000000001", 1, DateTime.Today, 10, 7, null), W312));
     }
 }
+
+public class NotaCreditoCafeteriaTests
+{
+    private static readonly EmisorEcf Caobas = new("122006044", "HOTEL LAS CAOBAS, SRL", "C/ Luis Enrique Carrón Esq. Av. S.Diego", "809-290-5858");
+
+    // la factura 12795 (E310000000239): 609.38 + 109.68 + 60.93 = 779.99, pero se cobro y se envio 780.00
+    private static readonly OriginalNota F12795 = new("E310000000239", new DateTime(2026, 10, 23), "132493931", "FERRECOMERCIAL MADE ALCANTARA, SRL",
+        609.38m, 109.68m, 60.93m, 780.00m);
+
+    [Fact]
+    public void La_anulacion_total_acredita_lo_cobrado_con_el_desglose_del_original()
+    {
+        var d = NotaCreditoEcf.Desglose(780, 1, F12795);
+        Assert.Equal(new DesgloseNota(609.38m, 0, 109.68m, 60.93m, 780.00m), d);
+        var xml = NotaCreditoEcf.Xml(new NotaCredito("E340000000009", 7, new DateTime(2026, 10, 23), 780, 1, "cliente no consumio"), F12795, Caobas,
+            new DateTime(2026, 10, 23, 15, 0, 0));
+        Assert.Contains("<MontoTotal>780.00</MontoTotal>", xml);
+        Assert.Contains("<MontoGravadoTotal>609.38</MontoGravadoTotal>", xml);
+        Assert.Contains("<TotalITBIS>109.68</TotalITBIS>", xml);
+        Assert.Contains("<NCFModificado>E310000000239</NCFModificado>", xml);
+    }
+
+    [Fact]
+    public void La_nota_por_monto_reparte_sobre_lo_cobrado()
+    {
+        // 390 de 780: la mitad exacta del ITBIS y de la propina
+        var d = NotaCreditoEcf.Desglose(390, 3, F12795);
+        Assert.Equal((54.84m, 30.47m, 390m), (d.Itbis, d.Propina, d.Monto));
+        Assert.Equal(390m - 54.84m - 30.47m, d.Gravado);
+    }
+}

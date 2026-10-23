@@ -752,14 +752,14 @@ export interface FacturaCerrada {
   dgii: EstadoEcf | null
   /** del walk-in (numera aparte; habitacion 0) */
   walkIn: boolean
-  /** Hospedaje, WalkIn, NotaHospedaje o NotaWalkIn */
+  /** Hospedaje, WalkIn, Cafeteria, NotaHospedaje, NotaWalkIn o NotaCafeteria */
   origen: string
   /** en una nota de credito: el e-NCF que modifica */
   modifica: string | null
 }
 
-export const listarFacturas = (desde: string, hasta: string, texto: string) =>
-  pedir<FacturaCerrada[]>(`/api/facturas?desde=${desde}&hasta=${hasta}&texto=${encodeURIComponent(texto)}`)
+export const listarFacturas = (desde: string, hasta: string, texto: string, ambito: 'hotel' | 'cafeteria' = 'hotel') =>
+  pedir<FacturaCerrada[]>(`/api/facturas?desde=${desde}&hasta=${hasta}&texto=${encodeURIComponent(texto)}&ambito=${ambito}`)
 
 // ---- etapa 6: walk-in ----
 
@@ -813,7 +813,7 @@ export const reenviarWalkIn = (numero: number) => pedir<EstadoEcf>(`/api/walkins
 export interface NotaPrevia { numero: number; encf: string | null; fecha: string; total: number; codigo: number | null; razon: string | null }
 
 export interface PreparacionNota {
-  origen: 'hospedaje' | 'walkin'
+  origen: 'hospedaje' | 'walkin' | 'cafeteria'
   factura: number
   encf: string
   fecha: string

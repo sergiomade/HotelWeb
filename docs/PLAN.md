@@ -268,3 +268,11 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   huesped, pago forma 8 por el SUBTOTAL, STP_PasarAlHotel (linea "CAFETERIA - FACTURA # n", servicio 7) y la web
   recalcula el encabezado de la cuenta del hotel (Delphi no). Solo habitaciones ocupadas, no transferidas y con credito
   (todas las lineas de la reserva con Credito = 1). Probado en Hotel_new: mesa 3 (factura 12797, 562.50) a la 102.
+- Parte 8d HECHA (2026-10-23, sin commit): Cafeteria > Facturas (`GET /api/facturas?...&ambito=cafeteria`): lo cobrado
+  (FaTmpFactura, sin las cuentas vacias de mesas unidas) y sus notas, con su estado en la DGII, ticket, reenvio y nota de
+  credito E34 (`/api/notas/cafeteria/...`, impresion `/nota/cafeteria/{n}`). Por monto: como SalvarNC de la cafeteria
+  (faFacturaNC, codigo 3). Anulacion total: Stp_AnularFacturaHotelNC no tiene la cafeteria; la web hace lo mismo en una
+  transaccion (faFacturaNC codigo 1 por el total, sin ITBIS pasados 30 dias, y HotelFacturaAnulada con Origen
+  'CAFETERIA'). La E34 de la cafeteria acredita el TOTAL cobrado (OriginalNota.TotalCobrado). Probado en testecf:
+  E340000000005 (390 a la E310000000239) y E340000000006 (anula la E310000000240 de BANCO BHD) ACEPTADAS. Usuario
+  temporal 9901 creado y BORRADO. ETAPA 8 COMPLETA (falta el commit de 8d).

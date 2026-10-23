@@ -62,9 +62,13 @@ public sealed class CheckoutController : ControllerBase
     /// <summary>Las facturas cerradas de un rango de fechas con su estado en la DGII.</summary>
     [HttpGet("api/facturas")]
     public async Task<ActionResult<IReadOnlyList<FacturaCerrada>>> Facturas([FromQuery] DateTime? desde, [FromQuery] DateTime? hasta,
-        [FromQuery] string? texto)
+        [FromQuery] string? texto, [FromQuery] string? ambito)
     {
-        try { return Ok(await _checkout.Facturas(desde ?? DateTime.Today.AddDays(-7), hasta ?? DateTime.Today, texto, _ecf)); }
+        try
+        {
+            return Ok(await _checkout.Facturas(desde ?? DateTime.Today.AddDays(-7), hasta ?? DateTime.Today, texto, _ecf,
+                string.Equals(ambito, "cafeteria", StringComparison.OrdinalIgnoreCase)));
+        }
         catch (ErrorCatalogo e) { return BadRequest(e.Message); }
     }
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import CobroCafeteria from './CobroCafeteria'
+import Facturas from './Facturas'
 import Fondo from './Fondo'
 import {
   agregarArticulo, agregarEspecial, articulosCafeteria, borrarLineaMesa, cambiarLineaMesa, cuentaMesa, dinero, mesasCafeteria,
@@ -15,9 +16,22 @@ const hora = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString('es
 /**
  * Cafeteria (etapa 8a), como PrjCaja de Delphi: las mesas y la cuenta abierta de cada una. Se agregan articulos del
  * menu (por codigo o por familia), se imprime la pre-cuenta (lo impreso queda fijo) y se mueve la cuenta de mesa.
- * El cobro con e-CF es la parte 8b.
+ * Cobro con e-CF o a la habitacion (8b, 8c) y la lista de facturas con sus notas de credito (8d).
  */
 export default function Cafeteria({ alVencer }: { alVencer: () => void }) {
+  const [vista, setVista] = useState<'mesas' | 'facturas'>('mesas')
+  return (
+    <>
+      <div className="pestanas" role="tablist" aria-label="Cafetería">
+        <button type="button" role="tab" aria-selected={vista === 'mesas'} className={vista === 'mesas' ? 'activo' : ''} onClick={() => setVista('mesas')}>Mesas</button>
+        <button type="button" role="tab" aria-selected={vista === 'facturas'} className={vista === 'facturas' ? 'activo' : ''} onClick={() => setVista('facturas')}>Facturas</button>
+      </div>
+      {vista === 'mesas' ? <Mesas alVencer={alVencer} /> : <Facturas alVencer={alVencer} ambito="cafeteria" />}
+    </>
+  )
+}
+
+function Mesas({ alVencer }: { alVencer: () => void }) {
   const [mesas, setMesas] = useState<MesaCafeteria[] | null>(null)
   const [articulos, setArticulos] = useState<ArticuloCafeteria[]>([])
   const [abierta, setAbierta] = useState<number | null>(null)

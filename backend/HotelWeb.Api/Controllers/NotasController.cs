@@ -10,7 +10,8 @@ namespace HotelWeb.Api.Controllers;
 public sealed record SolicitudNota(int Codigo, decimal Monto, string? Motivo, string? Responsable, string? Clave);
 
 /// <summary>
-/// Notas de credito E34 (etapa 7) a las facturas del check-out (origen "hospedaje") y del walk-in ("walkin"):
+/// Notas de credito E34 (etapas 7 y 8d) a las facturas del check-out ("hospedaje"), del walk-in ("walkin") y de la
+/// cafeteria ("cafeteria"):
 /// preparar, crear (anulacion total o por un monto, con un responsable), imprimir, estado y reenvio.
 /// </summary>
 [ApiController]
@@ -29,8 +30,6 @@ public sealed class NotasController : ControllerBase
     }
 
     private string Login => User.FindFirst("login")?.Value ?? Tokens.IdDe(User).ToString();
-
-    private static OrigenFactura DeNota(OrigenFactura o) => o == OrigenFactura.WalkIn ? OrigenFactura.NotaWalkIn : OrigenFactura.NotaHospedaje;
 
     /// <summary>La factura, sus notas, lo pendiente, su estado en la DGII y que se le puede hacer.</summary>
     [HttpGet("factura/{factura:long}")]
@@ -57,7 +56,7 @@ public sealed class NotasController : ControllerBase
     [HttpGet("{numero:long}")]
     public async Task<ActionResult<NotaImpresa>> Imprimible(string origen, long numero)
     {
-        try { return Ok(await _notas.Imprimible(DeNota(RepositorioNotas.OrigenDe(origen)), numero, _ecf)); }
+        try { return Ok(await _notas.Imprimible(RepositorioNotas.DeNota(RepositorioNotas.OrigenDe(origen)), numero, _ecf)); }
         catch (ErrorCatalogo e) { return BadRequest(e.Message); }
     }
 
@@ -66,7 +65,7 @@ public sealed class NotasController : ControllerBase
     {
         try
         {
-            var o = DeNota(RepositorioNotas.OrigenDe(origen));
+            var o = RepositorioNotas.DeNota(RepositorioNotas.OrigenDe(origen));
             var actual = await _ecf.Consultar(numero, o);
             if (actual.Aceptado) return BadRequest($"La nota {actual.Encf} ya fue aceptada por la DGII: no se vuelve a enviar.");
             var e = await _ecf.Enviar(numero, o);

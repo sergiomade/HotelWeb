@@ -10,13 +10,13 @@ import TicketCafeteria from './TicketCafeteria.tsx'
 
 // paginas para imprimir, solas en su pestana (usan la sesion guardada):
 // /factura/{numero} = factura del check-out (carta); /walkin/{numero} = ticket del walk-in (POS 80 mm);
-// /nota/{hospedaje|walkin}/{numero} = nota de credito E34 (carta)
+// /nota/{hospedaje|walkin|cafeteria}/{numero} = nota de credito E34 (carta)
 // /precuenta/{factura} = pre-cuenta de una mesa de la cafeteria (POS 80 mm)
 // /cafeteria/{factura} = ticket de la factura cobrada en la cafeteria, con el QR (POS 80 mm)
 const ruta = window.location.pathname
 const factura = /^\/factura\/(\d+)\/?$/.exec(ruta)
 const walkin = /^\/walkin\/(\d+)\/?$/.exec(ruta)
-const nota = /^\/nota\/(hospedaje|walkin)\/(\d+)\/?$/.exec(ruta)
+const nota = /^\/nota\/(hospedaje|walkin|cafeteria)\/(\d+)\/?$/.exec(ruta)
 const precuenta = /^\/precuenta\/(\d+)\/?$/.exec(ruta)
 const cafeteria = /^\/cafeteria\/(\d+)\/?$/.exec(ruta)
 

@@ -8,9 +8,12 @@ namespace HotelWeb.Core.Ecf;
 public sealed record NotaCredito(string Encf, long Numero, DateTime Fecha, decimal Monto, int Codigo, string? Razon);
 
 /// <summary>La factura que la nota modifica.</summary>
-public sealed record OriginalNota(string Ncf, DateTime Fecha, string? Rnc, string? Nombre, decimal SubTotal, decimal Itbis, decimal Propina)
+/// <param name="TotalCobrado">El total de la cafeteria cuando no es la suma (ver FacturaEcf.TotalCobrado): la anulacion
+/// total acredita ese total, con el mismo desglose que el e-CF original que acepto la DGII.</param>
+public sealed record OriginalNota(string Ncf, DateTime Fecha, string? Rnc, string? Nombre, decimal SubTotal, decimal Itbis, decimal Propina,
+    decimal? TotalCobrado = null)
 {
-    public decimal Total => SubTotal + Itbis + Propina;
+    public decimal Total => TotalCobrado ?? SubTotal + Itbis + Propina;
 }
 
 public sealed record DesgloseNota(decimal Gravado, decimal Exento, decimal Itbis, decimal Propina, decimal Monto);

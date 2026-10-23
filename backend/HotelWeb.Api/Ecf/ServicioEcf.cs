@@ -19,7 +19,7 @@ public sealed record TimbreEcf(string? CodigoSeguridad, string? FechaHoraFirma, 
 /// De donde sale el documento: el check-out (HotelTmpFactura), el walk-in (HotelFacturaWalking) y sus notas de credito
 /// (HotelFacturaNC, HotelFacturaWalkingNC), y la cafeteria (FaTmpFactura). Cada uno numera aparte.
 /// </summary>
-public enum OrigenFactura { Hospedaje, WalkIn, NotaHospedaje, NotaWalkIn, Cafeteria }
+public enum OrigenFactura { Hospedaje, WalkIn, NotaHospedaje, NotaWalkIn, Cafeteria, NotaCafeteria }
 
 /// <summary>
 /// Arma el e-CF de una factura cerrada (HotelTmpFactura), lo guarda en FacturaXml (sp_GuardarFacturaXml) y lo envia por
@@ -113,6 +113,20 @@ public sealed class ServicioEcf
     /// <summary>La nota de credito y su factura original, como CrearNotaCreditoXml / CrearNotaCreditoXmlWalking.</summary>
     internal static (NotaCredito Nota, OriginalNota Original, long OriginalId)? LeerNota(IDbConnection cn, IDbTransaction? tx, OrigenFactura origen, long devolucion)
     {
+        if (origen == OrigenFactura.NotaCafeteria)
+        {
+            // como CrearNotaCreditoXml de Comunes\uCreateXml.pas: faFacturaNC sobre FaTmpFactura
+            var c = cn.QueryFirstOrDefault<FilaNota>("""
+                SELECT Devolucion_id, InvFactura AS Original_id, Fecha, RTRIM(NCF) AS NCF, Total, CAST(CodigoModificacion AS int) AS CodigoModificacion,
+                       RTRIM(RazonModificacion) AS RazonModificacion
+                FROM faFacturaNC WHERE Devolucion_id = @devolucion
+                """, new { devolucion = (decimal)devolucion }, tx);
+            if (c is null) return null;
+            var oc = LeerCafeteria(cn, tx, (long)c.Original_id)
+                     ?? throw new ErrorCatalogo($"No se encontro la factura original de la nota {devolucion}.");
+            return (new NotaCredito(c.NCF ?? "", (long)c.Devolucion_id, c.Fecha.Date, c.Total ?? 0, c.CodigoModificacion ?? 0, c.RazonModificacion),
+                new OriginalNota(oc.Encf, oc.Fecha, oc.Rnc, oc.NombreCliente, oc.SubTotal, oc.Itbis, oc.Propina, oc.TotalCobrado), (long)c.Original_id);
+        }
         var walk = origen == OrigenFactura.NotaWalkIn;
         var n = cn.QueryFirstOrDefault<FilaNota>(walk
             ? """
@@ -134,7 +148,8 @@ public sealed class ServicioEcf
     internal static FacturaEcf ComoFactura(NotaCredito n, OriginalNota o)
     {
         var d = NotaCreditoEcf.Desglose(n.Monto, n.Codigo, o);
-        return new FacturaEcf(n.Encf, n.Numero, n.Fecha, o.Rnc, o.Nombre, d.Gravado + d.Exento, d.Itbis, d.Propina, false, Array.Empty<ItemEcf>());
+        return new FacturaEcf(n.Encf, n.Numero, n.Fecha, o.Rnc, o.Nombre, d.Gravado + d.Exento, d.Itbis, d.Propina, false, Array.Empty<ItemEcf>(),
+            d.Monto);
     }
 
     /// <summary>
@@ -217,7 +232,7 @@ public sealed class ServicioEcf
         FilaParametro p;
         using (var cn = _conexiones.Hotel())
         {
-            if (origen is OrigenFactura.NotaHospedaje or OrigenFactura.NotaWalkIn)
+            if (origen is OrigenFactura.NotaHospedaje or OrigenFactura.NotaWalkIn or OrigenFactura.NotaCafeteria)
             {
                 // la nota de credito (E34): siempre el e-CF completo (no hay resumen)
                 var n = LeerNota(cn, null, origen, numero) ?? throw new ErrorCatalogo($"No existe la nota de credito {numero}.");
