@@ -1110,3 +1110,25 @@ export const obtenerSecuencias = () => pedir<PantallaSecuencias>('/api/secuencia
 export const avisosSecuencias = () => pedir<SecuenciaEcf[]>('/api/secuencias/avisos')
 export const guardarSecuencia = (codigo: string, d: { autorizacion: string; fechaAutorizacion: string; desde: number; hasta: number; vence: string }) =>
   pedir<{ mensaje: string }>(`/api/secuencias/${codigo}`, { method: 'PUT', body: JSON.stringify(d) })
+
+// ---- etapa 9d: gastos menores (E43) ----
+
+export interface GastoLista { numero: number; fecha: string; encf: string; descripcion: string; beneficiario: string; total: number; formaPago: string; usuario: string | null; dgii: EstadoEcf | null }
+
+export interface PantallaGastos { gastos: GastoLista[]; puedeCrear: boolean; formasPago: Record<string, string>; tiposGasto: Record<string, string> }
+
+export interface NuevoGasto { fecha: string; descripcion: string; bienServicio: number; cantidad: number; precio: number; formaPago: string; tipoGasto: string; beneficiario: string; cedula: string; detalle: string }
+
+export interface TicketGasto {
+  gasto: { encf: string; numero: number; fecha: string; descripcion: string; bienServicio: number; cantidad: number; precio: number; total: number; formaPago: string; tipoGasto: string; beneficiario: string; cedula: string | null; detalle: string; usuario: string | null }
+  emisor: { rnc: string; razonSocial: string; direccion: string; telefono: string | null }
+  vencimiento: string | null
+  formaPago: string
+  tipoGasto: string
+  timbre: { codigoSeguridad: string | null; fechaHoraFirma: string | null; url: string | null }
+}
+
+export const listarGastos = (desde: string, hasta: string) => pedir<PantallaGastos>(`/api/gastos?desde=${desde}&hasta=${hasta}`)
+export const crearGasto = (g: NuevoGasto) => pedir<{ numero: number; encf: string; dgii: EstadoEcf }>('/api/gastos', { method: 'POST', body: JSON.stringify(g) })
+export const ticketGasto = (numero: number) => pedir<TicketGasto>(`/api/gastos/${numero}/ticket`)
+export const reenviarGasto = (numero: number) => pedir<EstadoEcf>(`/api/gastos/${numero}/enviar`, { method: 'POST' })

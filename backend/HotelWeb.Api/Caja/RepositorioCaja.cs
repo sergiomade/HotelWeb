@@ -67,8 +67,28 @@ public sealed class RepositorioCaja
             FROM HotelReservaAdelanto a LEFT JOIN CxcCliente c ON c.NumeroCliente = a.Cliente_id LEFT JOIN ConMonedas m ON m.Monedas_id = a.Monedas_id
             WHERE (@cierre IS NULL AND a.Posteado = 0 AND RTRIM(a.Usuario) = @u AND RTRIM(a.Estatus) = 'Activa')
                OR (@cierre IS NOT NULL AND EXISTS (SELECT 1 FROM HotelCierreCajaDetalle x WHERE x.Cierre_id = @cierre AND x.Tipo = 'A' AND x.Numero = a.ReservaAdelando_id))
+            -- gastos menores (E43) y compras a informales (E41) pagados en efectivo: salen de la gaveta (MIG_26). Los que
+            -- no estan en un cierre, desde el dia del primer cierre del hotel del usuario (o desde hoy)
+            UNION ALL
+            SELECT 'G', g.Gasto_id, g.Fecha, 'Gasto menor ' + RTRIM(g.NCF), RTRIM(g.Beneficiario), -43, 'GASTOS MENORES (E43)', g.Total, 0
+            FROM HotelGastoMenor g
+            WHERE (@cierre IS NULL AND g.FormaPago = '01' AND LEFT(RTRIM(g.Usuario), 10) = @u AND g.FechaAdicion >= @desde
+                   AND NOT EXISTS (SELECT 1 FROM HotelCierreCajaDetalle x WHERE x.Tipo = 'G' AND x.Numero = g.Gasto_id))
+               OR (@cierre IS NOT NULL AND EXISTS (SELECT 1 FROM HotelCierreCajaDetalle x WHERE x.Cierre_id = @cierre AND x.Tipo = 'G' AND x.Numero = g.Gasto_id))
+            UNION ALL
+            SELECT 'C', c.Compra_id, c.Fecha, 'Compra ' + RTRIM(c.NCF), RTRIM(c.Proveedor), -41, 'COMPRAS A INFORMALES (E41)', c.NetoPagar, 0
+            FROM HotelCompraInformal c
+            WHERE (@cierre IS NULL AND c.FormaPago = '01' AND LEFT(RTRIM(c.Usuario), 10) = @u AND c.FechaAdicion >= @desde
+                   AND NOT EXISTS (SELECT 1 FROM HotelCierreCajaDetalle x WHERE x.Tipo = 'C' AND x.Numero = c.Compra_id))
+               OR (@cierre IS NOT NULL AND EXISTS (SELECT 1 FROM HotelCierreCajaDetalle x WHERE x.Cierre_id = @cierre AND x.Tipo = 'C' AND x.Numero = c.Compra_id))
             ORDER BY 1 DESC, 2
-            """, new { u = A(u, 10), cierre }, tx)
+            """, new
+            {
+                u = A(u, 10), cierre,
+                desde = u is null ? DateTime.Today : cn.ExecuteScalar<DateTime?>(
+                    "SELECT CAST(MIN(FechaAdicion) AS date) FROM HotelCierreCaja WHERE Ambito = 'HOTEL' AND RTRIM(Usuario) = @u",
+                    new { u = A(u, 10) }, tx) ?? DateTime.Today,
+            }, tx)
             .Select(x => new MovimientoCaja(x.Tipo[0], (long)x.Numero, x.Fecha, x.Referencia, x.Nombre, x.Forma, x.FormaNombre ?? $"Forma {x.Forma}",
                 x.Monto ?? 0, x.Us ?? 0)).ToList();
 

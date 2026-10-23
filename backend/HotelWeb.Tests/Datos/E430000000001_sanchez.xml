@@ -1,0 +1,38 @@
+<?xml version="1.0"?>
+<ECF>
+  <Encabezado>
+    <Version>1.0</Version>
+    <IdDoc>
+      <TipoeCF>43</TipoeCF>
+      <eNCF>E430000000001</eNCF>
+      <FechaVencimientoSecuencia>31-12-2028</FechaVencimientoSecuencia>
+      <TipoPago>1</TipoPago>
+    </IdDoc>
+    <Emisor>
+      <RNCEmisor>131032494</RNCEmisor>
+      <RazonSocialEmisor>Ferrecentro Emilio Sanchez, Srl</RazonSocialEmisor>
+      <NombreComercial>Ferrecentro Emilio Sanchez, Srl</NombreComercial>
+      <DireccionEmisor>Aut. Duarte Km. 14 Bo. Independencia</DireccionEmisor>
+      <NumeroFacturaInterna>1</NumeroFacturaInterna>
+      <FechaEmision>11-10-2026</FechaEmision>
+    </Emisor>
+    <Totales>
+      <MontoExento>65.00</MontoExento>
+      <MontoTotal>65.00</MontoTotal>
+    </Totales>
+  </Encabezado>
+  <DetallesItems>
+    <Item>
+      <NumeroLinea>1</NumeroLinea>
+      <IndicadorFacturacion>4</IndicadorFacturacion>
+      <NombreItem>pago de peajes, viajes a san juan</NombreItem>
+      <IndicadorBienoServicio>2</IndicadorBienoServicio>
+      <DescripcionItem>para registrar el gasto de pago de peajes.</DescripcionItem>
+      <CantidadItem>1.00</CantidadItem>
+      <UnidadMedida>43</UnidadMedida>
+      <PrecioUnitarioItem>65.0000</PrecioUnitarioItem>
+      <MontoItem>65.00</MontoItem>
+    </Item>
+  </DetallesItems>
+  <FechaHoraFirma>11-10-2026 14:48:55</FechaHoraFirma>
+</ECF>

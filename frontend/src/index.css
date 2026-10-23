@@ -523,3 +523,5 @@ button.chico { padding: 0.15em 0.6em; font-size: 0.85em; }
   padding: 8px 16px; background: var(--llega-fondo); border-bottom: 1px solid var(--llega-borde); color: var(--texto);
 }
 .aviso-secuencias .botones { display: flex; gap: 6px; margin: 0; }
+
+.ticket-firma { margin-top: 22px !important; }

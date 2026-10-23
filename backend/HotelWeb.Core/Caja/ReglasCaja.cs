@@ -39,6 +39,10 @@ public sealed record ResumenCaja(IReadOnlyList<FormaResumen> Formas, decimal Ing
 /// </summary>
 public static class ReglasCaja
 {
+    /// <summary>Gastos menores (E43) y compras a informales (E41) pagados en efectivo: salen de la gaveta (decision 2026-10-23).</summary>
+    public const int FormaGastoMenor = -43;
+    public const int FormaCompraInformal = -41;
+
     /// <summary>ConMonedas (recibos y adelantos del hotel) o faFormadePago (cafeteria).</summary>
     public static ClaseForma Clase(AmbitoCaja ambito, int forma) => ambito switch
     {
@@ -48,6 +52,7 @@ public static class ReglasCaja
             2 => ClaseForma.Dolares,
             3 or 4 or 8 => ClaseForma.OtroDinero,   // cheque, tarjeta, deposito
             7 => ClaseForma.Salida,                 // PAY-OUT
+            FormaGastoMenor or FormaCompraInformal => ClaseForma.Salida,
             _ => ClaseForma.SinDinero,              // 5 nota de credito, 6 credito
         },
         _ => forma switch

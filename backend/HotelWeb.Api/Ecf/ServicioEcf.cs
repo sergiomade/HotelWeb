@@ -19,7 +19,7 @@ public sealed record TimbreEcf(string? CodigoSeguridad, string? FechaHoraFirma, 
 /// De donde sale el documento: el check-out (HotelTmpFactura), el walk-in (HotelFacturaWalking) y sus notas de credito
 /// (HotelFacturaNC, HotelFacturaWalkingNC), y la cafeteria (FaTmpFactura). Cada uno numera aparte.
 /// </summary>
-public enum OrigenFactura { Hospedaje, WalkIn, NotaHospedaje, NotaWalkIn, Cafeteria, NotaCafeteria }
+public enum OrigenFactura { Hospedaje, WalkIn, NotaHospedaje, NotaWalkIn, Cafeteria, NotaCafeteria, GastoMenor }
 
 /// <summary>
 /// Arma el e-CF de una factura cerrada (HotelTmpFactura), lo guarda en FacturaXml (sp_GuardarFacturaXml) y lo envia por
@@ -75,6 +75,7 @@ public sealed class ServicioEcf
         transferida = false;
         if (origen == OrigenFactura.WalkIn) return LeerWalkIn(cn, tx, numero);
         if (origen == OrigenFactura.Cafeteria) return LeerCafeteria(cn, tx, numero);
+        if (origen == OrigenFactura.GastoMenor) return LeerGasto(cn, tx, numero) is { } g ? GastoMenorEcf.ComoFactura(g) : null;
         return LeerNota(cn, tx, origen, numero) is { } n ? ComoFactura(n.Nota, n.Original) : null;
     }
 
@@ -82,6 +83,17 @@ public sealed class ServicioEcf
     /// La factura cobrada de la cafeteria (FaTmpFactura), como CrearFacturaXml de Comunes\uCreateXml.pas: items de
     /// cantidad x precio, credito (TipoPago 2) si algun pago fue a credito (forma 3) y el TOTAL grabado (no la suma).
     /// </summary>
+    /// <summary>El gasto menor (HotelGastoMenor, MIG_14).</summary>
+    internal static GastoMenor? LeerGasto(IDbConnection cn, IDbTransaction? tx, long numero) =>
+        cn.Query<(int Id, string Ncf, DateTime Fecha, string Descripcion, byte Bs, decimal Cantidad, decimal Precio, decimal Total, string FormaPago,
+                string TipoGasto, string Beneficiario, string? Cedula, string Detalle, string? Usuario)>("""
+            SELECT Gasto_id, RTRIM(NCF), Fecha, RTRIM(Descripcion), TipoBienServicio, Cantidad, Precio, Total, FormaPago, TipoGasto606,
+                   RTRIM(Beneficiario), RTRIM(Cedula), RTRIM(Detalle), RTRIM(Usuario)
+            FROM HotelGastoMenor WHERE Gasto_id = @numero
+            """, new { numero = (int)numero }, tx)
+            .Select(x => new GastoMenor(x.Ncf, x.Id, x.Fecha.Date, x.Descripcion, x.Bs, x.Cantidad, x.Precio, x.Total, x.FormaPago, x.TipoGasto,
+                x.Beneficiario, x.Cedula, x.Detalle, x.Usuario)).FirstOrDefault();
+
     internal static FacturaEcf? LeerCafeteria(IDbConnection cn, IDbTransaction? tx, long numero)
     {
         var f = cn.QueryFirstOrDefault<(int Factura, string? Ncf, DateTime Fecha, string? Rnc, string? Nombre, decimal SubTotal, decimal Itbis,
@@ -239,6 +251,13 @@ public sealed class ServicioEcf
                 f = ComoFactura(n.Nota, n.Original);
                 xml = NotaCreditoEcf.Xml(n.Nota, n.Original, Emisor(cn), DateTime.Now);
             }
+            else if (origen == OrigenFactura.GastoMenor)
+            {
+                // el gasto menor (E43): siempre el e-CF completo, sin comprador
+                var g = LeerGasto(cn, null, numero) ?? throw new ErrorCatalogo($"No existe el gasto menor {numero}.");
+                f = GastoMenorEcf.ComoFactura(g);
+                xml = GastoMenorEcf.Xml(g, Emisor(cn), FechaVencimiento(cn, g.Encf), DateTime.Now);
+            }
             else
             {
                 f = Leer(cn, null, origen, numero, out var transferida) ?? throw new ErrorCatalogo($"No existe la factura {numero}.");
@@ -343,11 +362,13 @@ public sealed class ServicioEcf
         if (conEcf.Count == 0) return r;
         string? url;
         string? clave;
+        string rnc;
         using (var cn = _conexiones.Hotel())
         {
             var p = Parametro(cn);
             url = p.UrlApiEcf;
             clave = p.ClaveApiEcf;
+            rnc = p.RncEmpresa ?? "";
         }
         if (string.IsNullOrWhiteSpace(url))
         {
@@ -370,7 +391,7 @@ public sealed class ServicioEcf
                 await turnos.WaitAsync();
                 try
                 {
-                    var doc = docs[EcfHotel.EsResumen(f) ? "RFCE" : "ECF"].Where(x => Texto(x, "encf") == f.Encf)
+                    var doc = docs[EcfHotel.EsResumen(f) ? "RFCE" : "ECF"].Where(x => Texto(x, "encf") == f.Encf && DelEmisor(x, rnc))
                         .OrderByDescending(x => x.TryGetProperty("id", out var id) ? id.GetInt64() : 0).Cast<JsonElement?>().FirstOrDefault();
                     return await DeDocumento(api, f, f.Factura, doc, null);
                 }
@@ -440,6 +461,13 @@ public sealed class ServicioEcf
         }
     }
 
+    /// <summary>
+    /// DocumentosXml lo pueden compartir varias empresas y los e-NCF se repiten entre ellas (Delphi filtra por RncEmisor, ver
+    /// FiltroRncEmisor): solo cuentan los del RNC del hotel. Si la API no trae el RNC, se acepta.
+    /// </summary>
+    private static bool DelEmisor(JsonElement x, string rnc) =>
+        Texto(x, "rncEmisor") is not { Length: > 0 } r || r.Trim() == rnc.Trim();
+
     /// <summary>El registro mas nuevo de DocumentosXml de ese e-NCF y tipo (la API filtra por fecha de creacion).</summary>
     private async Task<JsonElement?> Documento(HttpClient api, FacturaEcf f, string tipo)
     {
@@ -447,7 +475,9 @@ public sealed class ServicioEcf
         var hasta = DateTime.Today.AddDays(1).ToString("yyyy-MM-dd");
         var lista = await Llamar(api, $"/DgiiECfs/DocumentosXml?tipoDocumento={tipo}&desde={desde}&hasta={hasta}", 30, get: true);
         if (lista.ValueKind != JsonValueKind.Array) return null;
-        return lista.EnumerateArray().Where(x => Texto(x, "encf") == f.Encf)
+        string rnc;
+        using (var cn = _conexiones.Hotel()) rnc = Parametro(cn).RncEmpresa ?? "";
+        return lista.EnumerateArray().Where(x => Texto(x, "encf") == f.Encf && DelEmisor(x, rnc))
             .OrderByDescending(x => x.TryGetProperty("id", out var id) ? id.GetInt64() : 0).Cast<JsonElement?>().FirstOrDefault();
     }
 

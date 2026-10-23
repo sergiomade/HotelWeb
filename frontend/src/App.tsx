@@ -9,8 +9,9 @@ import Reservas from './Reservas'
 import WalkIn from './WalkIn'
 import Cafeteria from './Cafeteria'
 import Reportes from './Reportes'
+import Compras from './Compras'
 
-type Pagina = 'rack' | 'recepcion' | 'walkin' | 'cafeteria' | 'reportes' | 'reservas' | 'catalogos' | 'inicio'
+type Pagina = 'rack' | 'recepcion' | 'walkin' | 'cafeteria' | 'compras' | 'reportes' | 'reservas' | 'catalogos' | 'inicio'
 
 export default function App() {
   const [sesion, setSesion] = useState<Sesion | null>(() => sesionGuardada())
@@ -74,6 +75,7 @@ export default function App() {
           <button type="button" className={pagina === 'recepcion' ? 'activo' : ''} onClick={() => setPagina('recepcion')}>Recepción</button>
           <button type="button" className={pagina === 'walkin' ? 'activo' : ''} onClick={() => setPagina('walkin')}>Walk-in</button>
           <button type="button" className={pagina === 'cafeteria' ? 'activo' : ''} onClick={() => setPagina('cafeteria')}>Cafetería</button>
+          <button type="button" className={pagina === 'compras' ? 'activo' : ''} onClick={() => setPagina('compras')}>Compras</button>
           <button type="button" className={pagina === 'reportes' ? 'activo' : ''} onClick={() => setPagina('reportes')}>Reportes</button>
           <button type="button" className={pagina === 'catalogos' ? 'activo' : ''} onClick={() => setPagina('catalogos')}>Catalogos</button>
           <button type="button" className={pagina === 'inicio' ? 'activo' : ''} onClick={() => setPagina('inicio')}>Sistema</button>
@@ -100,6 +102,7 @@ export default function App() {
         {pagina === 'recepcion' && <Recepcion alVencer={cerrar} />}
         {pagina === 'walkin' && <WalkIn alVencer={cerrar} />}
         {pagina === 'cafeteria' && <Cafeteria alVencer={cerrar} />}
+        {pagina === 'compras' && <Compras alVencer={cerrar} />}
         {pagina === 'reportes' && <Reportes alVencer={cerrar} />}
         {pagina === 'reservas' && <Reservas alVencer={cerrar} />}
         {pagina === 'catalogos' && <Catalogos key={vistaCatalogos} alVencer={cerrar} />}

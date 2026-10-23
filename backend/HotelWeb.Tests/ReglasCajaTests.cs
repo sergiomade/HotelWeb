@@ -54,3 +54,21 @@ public class ReglasCajaTests
         Assert.NotNull(ReglasCaja.ValidarCierre(r, 2, 1000.001m, 10, null));
     }
 }
+
+public class ReglasCajaGastosTests
+{
+    [Fact]
+    public void Gastos_y_compras_en_efectivo_restan_del_efectivo()
+    {
+        var m = new List<MovimientoCaja>
+        {
+            new('R', 1, DateTime.Today, "Hab. 102", "HUESPED", 1, "EFECTIVO", 5000, 0),
+            new('G', 1, DateTime.Today, "Gasto menor E430000000001", "CHOFER", ReglasCaja.FormaGastoMenor, "GASTOS MENORES (E43)", 300, 0),
+            new('C', 1, DateTime.Today, "Compra E410000000902", "PROVEEDOR", ReglasCaja.FormaCompraInformal, "COMPRAS A INFORMALES (E41)", 1200, 0),
+        };
+        var r = ReglasCaja.Resumen(AmbitoCaja.Hotel, m);
+        Assert.Equal(3500m, r.Efectivo);
+        Assert.Equal(3500m, r.Ingresos);
+        Assert.Equal(ClaseForma.Salida, r.Formas.Single(f => f.Forma == ReglasCaja.FormaGastoMenor).Clase);
+    }
+}

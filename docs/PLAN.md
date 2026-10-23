@@ -315,3 +315,11 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
 - Parte 9d-1 HECHA (2026-10-23, sin commit): Catalogos > Secuencias e-CF (`/api/secuencias`): por tipo, autorizacion,
   desde-hasta, ultima usada, quedan, vence y estado (Stp_EstadoSecuenciasEcf); cambiar con Stp_GuardarAutorizacionEcf.
   Aviso al entrar (una vez por sesion, como MostrarAvisosSecuenciasEcf) de los tipos que se usan y no estan OK.
+- Parte 9d-2 HECHA (2026-10-23, sin commit): menu Compras > Gastos menores (E43) (`/api/gastos`, ticket 80 mm
+  `/gasto/{n}`): Stp_CrearGastoMenor (de Delphi) revisa y toma el E43 dentro de la secuencia; XML en C# igual byte a byte
+  al E430000000001 de Sanchez aceptado (mismo codigo de Delphi; PrecioUnitarioItem con 4 decimales como ese). Solo
+  Permisos:ComprobantesEspeciales. Lo pagado en efectivo resta en el cuadre del hotel del que lo hizo (MIG_26: Tipo G y C
+  en HotelCierreCajaDetalle; aplicada en Hotel_new). Probado en testecf: E430000000004 ACEPTADA.
+  Hallazgos: (1) en Hotel_new los E43 1-3 ya se habian enviado desde Delphi (11 al 14/10) y sus gastos no estan en la
+  tabla: el SP volvia a dar el 1; se puso SecuenciaDesdeEncf = 4 en Hotel_new. (2) La web buscaba el documento de
+  WebEncf solo por e-NCF: ahora tambien por rncEmisor (DocumentosXml puede tener varias empresas, como en Delphi).
