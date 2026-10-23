@@ -675,3 +675,66 @@ export const prepararTransferencia = (habitacion: number) => pedir<PreparacionTr
 export const transferirCuenta = (habitacion: number, hasta: number) =>
   pedir<{ desde: number; hasta: number; facturaDestino: number; cerrada: number | null; cargos: number; pagos: number; avisos: string[] }>(
     `/api/cuentas/${habitacion}/transferencia`, { method: 'POST', body: JSON.stringify({ hasta }) })
+
+// ---- etapa 5: check-out con e-CF ----
+
+export interface TipoComprobante { id: number; codigo: string; nombre: string }
+
+export interface PreparacionCheckout {
+  habitacion: number
+  factura: number
+  cliente: string | null
+  huesped: string | null
+  rnc: string | null
+  subTotal: number
+  itbis: number
+  propina: number
+  total: number
+  saldo: number
+  transferida: boolean
+  /** Un e-NCF que la cuenta ya traia (de antes): se usa ese. */
+  ncfActual: string | null
+  tipos: TipoComprobante[]
+  sugerido: number
+  /** Por que no se puede cerrar todavia (balance, totales). */
+  impide: string | null
+}
+
+export interface EstadoEcf { encf: string; factura: number; estado: string; mensaje: string | null; aceptado: boolean }
+
+export interface RespuestaCheckout {
+  factura: { numero: number; encf: string | null; total: number; transferida: boolean }
+  dgii: EstadoEcf | null
+}
+
+export interface LineaImpresa { fecha: string | null; descripcion: string; cantidad: number; precio: number; importe: number }
+
+export interface FacturaImpresa {
+  numero: number
+  encf: string | null
+  tipoNombre: string
+  fecha: string
+  vencimiento: string | null
+  emisor: { rnc: string; razonSocial: string; direccion: string; telefono: string | null }
+  cliente: string | null
+  rnc: string | null
+  huesped: string | null
+  habitacion: number
+  entrada: string | null
+  salida: string | null
+  items: LineaImpresa[]
+  otros: LineaImpresa[]
+  subTotal: number
+  itbis: number
+  propina: number
+  total: number
+  transferida: boolean
+  timbre: { codigoSeguridad: string | null; fechaHoraFirma: string | null; url: string | null }
+}
+
+export const prepararCheckout = (habitacion: number) => pedir<PreparacionCheckout>(`/api/cuentas/${habitacion}/checkout`)
+export const hacerCheckout = (habitacion: number, tipo: number, rnc: string) =>
+  pedir<RespuestaCheckout>(`/api/cuentas/${habitacion}/checkout`, { method: 'POST', body: JSON.stringify({ tipo, rnc }) })
+export const estadoDgii = (numero: number) => pedir<EstadoEcf>(`/api/facturas/${numero}/dgii`)
+export const reenviarEcf = (numero: number) => pedir<EstadoEcf>(`/api/facturas/${numero}/enviar`, { method: 'POST' })
+export const obtenerFacturaImpresa = (numero: number) => pedir<FacturaImpresa>(`/api/facturas/${numero}`)

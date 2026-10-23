@@ -22,6 +22,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Datos\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\HotelWeb.Core\HotelWeb.Core.csproj" />
     <ProjectReference Include="..\HotelWeb.Api\HotelWeb.Api.csproj" />
   </ItemGroup>

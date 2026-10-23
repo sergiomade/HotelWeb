@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import Fondo from './Fondo'
 import RecibosCuenta from './RecibosCuenta'
+import Espera from './Espera'
 import {
-  anularCargo, cambiarHabitacion, cambiarSalida, cargarACuenta, dinero, FACTOR_IMPUESTOS, fecha, obtenerCuenta, obtenerPrecios,
-  obtenerServicios, permisosCuenta, prepararCambio, prepararTransferencia, seAnula, SesionVencida, transferirCuenta, verSalida,
-  type CuentaHabitacion, type HabitacionRack, type PantallaPrecios, type PreparacionCambio, type PreparacionTransferencia,
-  type SalidaCuenta, type Servicio,
+  anularCargo, cambiarHabitacion, cambiarSalida, cargarACuenta, dinero, FACTOR_IMPUESTOS, fecha, hacerCheckout, obtenerCuenta,
+  obtenerPrecios, obtenerServicios, permisosCuenta, prepararCambio, prepararCheckout, prepararTransferencia, reenviarEcf, seAnula,
+  SesionVencida, transferirCuenta, verSalida,
+  type CuentaHabitacion, type EstadoEcf, type HabitacionRack, type PantallaPrecios, type PreparacionCambio, type PreparacionCheckout,
+  type PreparacionTransferencia, type RespuestaCheckout, type SalidaCuenta, type Servicio,
 } from './api'
 
 /** Panel con la cuenta abierta de una habitacion: cargos, pagos y saldo; agregar un cargo y anular uno. */
@@ -18,7 +20,9 @@ export default function Cuenta({ habitacion: h, alCerrar, alVencer, alCambiar }:
   const [cuenta, setCuenta] = useState<CuentaHabitacion | null>(null)
   const [anula, setAnula] = useState(false)
   const [anulaRecibos, setAnulaRecibos] = useState(false)
-  const [abierto, setAbierto] = useState<'cargo' | 'pago' | 'salida' | 'cambio' | null>(null)
+  const [abierto, setAbierto] = useState<'cargo' | 'pago' | 'salida' | 'cambio' | 'checkout' | null>(null)
+  // despues del check-out: la factura cerrada y lo que dijo la DGII
+  const [cerrada, setCerrada] = useState<RespuestaCheckout | null>(null)
   const [error, setError] = useState('')
   const [avisos, setAvisos] = useState<string[]>([])
   // despues de mover la cuenta a otra habitacion: el panel muestra el resultado (esta habitacion ya quedo libre)
@@ -73,7 +77,8 @@ export default function Cuenta({ habitacion: h, alCerrar, alVencer, alCambiar }:
           <button type="button" className="secundario" onClick={alCerrar} aria-label="Cerrar">Cerrar</button>
         </header>
 
-        {movida && (
+        {cerrada && <Cerrada r={cerrada} habitacion={h.numero} alCerrar={alCerrar} alError={manejar} />}
+        {!cerrada && movida && (
           <div role="status">
             <p className="ok-texto">
               {movida.transferida
@@ -84,10 +89,10 @@ export default function Cuenta({ habitacion: h, alCerrar, alVencer, alCambiar }:
             <div className="botones"><button type="button" onClick={alCerrar}>Cerrar</button></div>
           </div>
         )}
-        {!movida && !ocupada && <Libre h={h} />}
-        {!movida && ocupada && error && <p className="error" role="alert">{error}</p>}
-        {!movida && ocupada && !cuenta && !error && <p className="tenue">Cargando la cuenta...</p>}
-        {!movida && cuenta && (
+        {!cerrada && !movida && !ocupada && <Libre h={h} />}
+        {!cerrada && !movida && ocupada && error && <p className="error" role="alert">{error}</p>}
+        {!cerrada && !movida && ocupada && !cuenta && !error && <p className="tenue">Cargando la cuenta...</p>}
+        {!cerrada && !movida && cuenta && (
           <>
             {!cuenta.transferida && (
               <div className="acciones-cuenta">
@@ -97,7 +102,12 @@ export default function Cuenta({ habitacion: h, alCerrar, alVencer, alCambiar }:
                     <button type="button" className="boton-cargo" onClick={() => setAbierto('cargo')}>Agregar cargo</button>
                     <button type="button" className="boton-pago" onClick={() => setAbierto('pago')}>Registrar pago</button>
                     <button type="button" className="secundario boton-mover" onClick={() => { setAvisos([]); setAbierto('cambio') }}>Cambiar habitación</button>
+                    <button type="button" className="boton-checkout" onClick={() => { setAvisos([]); setAbierto('checkout') }}>Check-out</button>
                   </div>
+                )}
+                {abierto === 'checkout' && (
+                  <CheckOut habitacion={h.numero} alError={manejar} alCerrar={() => setAbierto(null)}
+                            alCerrada={(r) => { setCerrada(r); setAbierto(null); alCambiar?.() }} />
                 )}
                 {abierto === 'cambio' && (
                   <MoverCuenta habitacion={h.numero} alError={manejar} alCerrar={() => setAbierto(null)}
@@ -299,6 +309,137 @@ function CambiarSalida({ habitacion, alCambiar, alCerrar, alError }: {
         <button type="submit" disabled={enviando || !nueva || igual}>{enviando ? 'Guardando...' : 'Cambiar salida'}</button>
       </div>
     </form>
+  )
+}
+
+/**
+ * Check-out con e-CF (etapa 5), como Delphi: solo con el balance en 0; se escoge el comprobante y se revisa todo antes
+ * de tomar el e-NCF; la cuenta se cierra y despues se envia a la DGII.
+ */
+function CheckOut({ habitacion, alCerrada, alCerrar, alError }: {
+  habitacion: number
+  alCerrada: (r: RespuestaCheckout) => void
+  alCerrar: () => void
+  alError: (e: unknown) => void
+}) {
+  const [p, setP] = useState<PreparacionCheckout | null>(null)
+  const [tipo, setTipo] = useState(2)
+  const [rnc, setRnc] = useState('')
+  const [error, setError] = useState('')
+  const [enviando, setEnviando] = useState(false)
+
+  useEffect(() => {
+    prepararCheckout(habitacion).then((r) => {
+      setP(r)
+      setTipo(r.sugerido)
+      setRnc(r.rnc && r.rnc.replace(/0/g, '') !== '' ? r.rnc : '')
+    }).catch(alError)
+  }, [habitacion, alError])
+
+  const sinRnc = rnc.trim() === '' || rnc.replace(/0/g, '').trim() === ''
+  // sin RNC solo hay consumo (E32), como Delphi
+  const tipos = p ? (sinRnc ? p.tipos.filter((t) => t.id === 2) : p.tipos) : []
+  const tipoActual = p?.ncfActual ? null : tipos.find((t) => t.id === tipo) ?? tipos[0]
+
+  async function enviar(ev: FormEvent) {
+    ev.preventDefault()
+    if (!p || p.impide) return
+    const comp = p.transferida ? 'sin e-NCF (cuenta transferida)' : p.ncfActual ? `con el ${p.ncfActual}` : `con ${tipoActual?.codigo} (${tipoActual?.nombre.toLowerCase()})`
+    if (!window.confirm(`¿Hacer el check-out de la habitación ${habitacion} ${comp} por ${dinero(p.total)}? Se envía a la DGII y no se puede deshacer.`)) return
+    setEnviando(true)
+    setError('')
+    try {
+      alCerrada(await hacerCheckout(habitacion, tipoActual?.id ?? tipo, rnc))
+    } catch (e) {
+      if (e instanceof SesionVencida) alError(e)
+      else setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  if (!p) return <p className="tenue">Preparando el check-out...</p>
+  return (
+    <form className="grupo-cargo" onSubmit={enviar}>
+      {enviando && <Espera texto={p.transferida ? 'Haciendo el check-out, espere...' : 'Conectando con la DGII, espere...'} />}
+      <dl className="datos-lista">
+        <dt>Cliente</dt><dd>{p.cliente}</dd>
+        <dt>Factura</dt><dd>{dinero(p.subTotal)}{p.itbis ? ` + ITBIS ${dinero(p.itbis)}` : ''}{p.propina ? ` + propina ${dinero(p.propina)}` : ''} = <strong>{dinero(p.total)}</strong></dd>
+        <dt>Balance</dt><dd className={p.saldo !== 0 ? 'mal' : ''}>{dinero(p.saldo)}</dd>
+      </dl>
+      {p.impide && <p className="error">{p.impide}</p>}
+      {!p.impide && p.transferida && <p className="alerta">Cuenta transferida: se cierra en 0, sin e-NCF y sin envío a la DGII.</p>}
+      {!p.impide && !p.transferida && (
+        p.ncfActual
+          ? <p className="alerta">La cuenta ya tiene el {p.ncfActual}: se usa ese.</p>
+          : (
+            <div className="dos">
+              <label>RNC / cédula / pasaporte
+                <input value={rnc} maxLength={11} onChange={(e) => setRnc(e.target.value.trim())} placeholder="En blanco: consumidor final" autoFocus />
+              </label>
+              <label>Comprobante
+                <select value={tipoActual?.id ?? ''} onChange={(e) => setTipo(Number(e.target.value))}>
+                  {tipos.map((t) => <option key={t.id} value={t.id}>{t.codigo} · {t.nombre}</option>)}
+                </select>
+              </label>
+            </div>
+          )
+      )}
+      {!p.impide && !p.transferida && !p.ncfActual && tipoActual?.id === 2 && p.total >= 250000 && (
+        <p className="alerta">Consumo de 250,000 o más: la DGII pide el RNC, la cédula o el pasaporte y el nombre del cliente.</p>
+      )}
+      {error && <p className="error" role="alert">{error}</p>}
+      <div className="botones">
+        <button type="button" className="secundario" onClick={alCerrar}>Cancelar</button>
+        <button type="submit" disabled={enviando || !!p.impide}>{enviando ? 'Cerrando y enviando a la DGII...' : 'Hacer el check-out'}</button>
+      </div>
+    </form>
+  )
+}
+
+/** Despues del check-out: el numero, lo que dijo la DGII, imprimir y reenviar si no llego. */
+function Cerrada({ r, habitacion, alCerrar, alError }: {
+  r: RespuestaCheckout
+  habitacion: number
+  alCerrar: () => void
+  alError: (e: unknown) => void
+}) {
+  const [dgii, setDgii] = useState<EstadoEcf | null>(r.dgii)
+  const [enviando, setEnviando] = useState(false)
+  const [error, setError] = useState('')
+  const f = r.factura
+
+  async function reenviar() {
+    setEnviando(true)
+    setError('')
+    try {
+      setDgii(await reenviarEcf(f.numero))
+    } catch (e) {
+      if (e instanceof SesionVencida) alError(e)
+      else setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  return (
+    <div role="status">
+      {enviando && <Espera texto="Conectando con la DGII, espere..." />}
+      <p className="ok-texto">Check-out hecho: la habitación {habitacion} quedó libre. Factura #{f.numero}{f.encf ? ` · ${f.encf}` : ''} · {dinero(f.total)}.</p>
+      {f.transferida && <p className="tenue">Cuenta transferida: sin e-NCF ni envío a la DGII.</p>}
+      {dgii && (
+        <p className={dgii.aceptado ? 'ok-texto' : 'error'}>
+          DGII: {dgii.estado}{dgii.mensaje ? ` · ${dgii.mensaje}` : ''}
+        </p>
+      )}
+      {dgii && !dgii.aceptado && <p className="tenue">La factura ya está cerrada con su e-NCF: si no llegó o la rechazaron, corrija lo que diga la DGII y reenvíela.</p>}
+      {error && <p className="error" role="alert">{error}</p>}
+      <div className="botones">
+        {dgii && !dgii.aceptado && <button type="button" className="secundario" disabled={enviando} onClick={reenviar}>{enviando ? 'Enviando...' : 'Reenviar a la DGII'}</button>}
+        {!f.transferida && <button type="button" className="secundario" onClick={() => window.open(`/factura/${f.numero}`, '_blank')}>Imprimir factura</button>}
+        <button type="button" onClick={alCerrar}>Cerrar</button>
+      </div>
+    </div>
   )
 }
 

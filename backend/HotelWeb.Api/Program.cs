@@ -28,6 +28,9 @@ builder.Services.AddSingleton<HotelWeb.Api.Hospedaje.RepositorioRecibos>();
 builder.Services.AddSingleton<HotelWeb.Api.Hospedaje.RepositorioSalidas>();
 builder.Services.AddSingleton<HotelWeb.Api.Hospedaje.RepositorioCambioHabitacion>();
 builder.Services.AddSingleton<HotelWeb.Api.Hospedaje.RepositorioTransferencia>();
+builder.Services.AddHttpClient("ecf");
+builder.Services.AddSingleton<HotelWeb.Api.Ecf.ServicioEcf>();
+builder.Services.AddSingleton<HotelWeb.Api.Ecf.RepositorioCheckout>();
 builder.Services.AddSingleton<PermisosWeb>();
 
 // ---- sesion: token JWT; todo la pide salvo el ingreso y el ping ----

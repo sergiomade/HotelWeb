@@ -180,3 +180,23 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   E320000006067 los lleva gravados), PAY-OUT aparte, pagos y adelantos pasan como pagos (quedan inactivos en el origen);
   el origen queda en 0 y se cierra en el mismo paso con Stp_CHECKOUT (sin e-NCF). Todo en una transaccion.
 - ETAPA 4 COMPLETA salvo la impresion del recibo (despues). Siguiente: etapa 5, checkout con e-CF.
+
+## Etapa 5 (checkout con e-CF): decisiones del usuario (2026-10-23)
+- Flujo: boton Check-out en la cuenta (balance 0, como Stp_CHECKOUT) -> tipo E31/E32/E44/E45 con las validaciones de
+  Delphi ANTES de tomar el numero -> en UNA transaccion: e-NCF (STp_NumeroComprobanteFiscal_E, candado MIG_18) +
+  HotelFactura.NCF/RNC + Stp_CHECKOUT -> XML (copia en C# de ArmarYEnviarEcf de UCreateXmlHotel.pas) en FacturaXml ->
+  envio por la misma API (EnviarDesdeHotel; E32 < 250k: FirmarDesdeHotel + RFCE) -> respuesta; boton Reenviar si falla.
+- PAY-OUT FUERA del e-CF (es reembolso, no venta). Delphi lo pone como item y no en los totales: los items no cuadran
+  (latente: ninguno de los 25 e-CF cerrados en Hotel_new tiene PAY-OUT).
+- Pruebas: se puede enviar por la API de este equipo (localhost:8005), que es de pruebas.
+- Factura impresa: carta, como Delphi, con el QR (fc.dgii < 250k E32, ecf.dgii el resto).
+- Etapa 5, parte 1 HECHA (2026-10-23): check-out con e-CF desde la cuenta (`/api/cuentas/{h}/checkout`), estado y
+  reenvio (`/api/facturas/{n}/dgii`, `/enviar`) y factura impresa carta con QR (`/factura/{n}`, `/api/facturas/{n}`).
+  XML en C# (HotelWeb.Core/Ecf/EcfHotel.cs) IGUAL byte a byte al de Delphi aceptado (prueba con E320000006067).
+  El e-CF entero se valida ANTES de tomar el e-NCF. Ambiente del QR: Ecf:Ambiente (1 testecf en Development, 3 ecf).
+  Probado contra testecf por localhost:8005: E320000006069 (RFCE) y E310000000237 (ECF) ACEPTADAS (facturas 9655 y
+  9656 de Hotel_new; se dejan: borrar una factura con e-NCF podria repetir el numero).
+- Decision del usuario (2026-10-23): en el check-out web basta la sesion (Delphi pide entrar otra vez). Vencimiento de la
+  secuencia por TIPO (ComprobanteFiscal.FechaVencimientoEncf; Delphi toma siempre la del E31) e impreso en todos los
+  tipos, E32 incluida (en el XML de la E32 no va). Espera a pantalla completa mientras se habla con la DGII.
+- Falta de la etapa 5: lista de facturas cerradas con su estado en la DGII (reimprimir, reenviar).
