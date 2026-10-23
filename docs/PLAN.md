@@ -51,7 +51,7 @@ y de la cafeteria (`C:\Contabilidad\Sources\RestaurantHotel`, PrjCaja). Acordado
 | 6 | Walk-in | Factura directa con e-CF | Si + DGII |
 | 7 | Notas E34 y E33 | Hospedaje y walk-in, regla de 30 dias | Si + DGII |
 | 8 | Cafeteria | Mesas, comandas, cobro con e-CF, cargo a habitacion, notas | Si + DGII |
-| 9 | Caja y reportes | Cuadre, cambio de turno, ventas, secuencias, E43, E41 | Si |
+| 9 | Caja y reportes | Cuadre, cambio de turno, ventas del periodo, secuencias, E43, E41; reportes de Delphi: habitaciones ocupadas, proyeccion de reservaciones, NCF de las facturas, facturas canceladas sin cobro, maestro de clientes | Si |
 | 10 | Puesta en marcha | Cada modulo a prueba junto a Delphi; al final se apaga Delphi | No |
 
 Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otros 2 a 3 meses (5 a 7 meses en total).
@@ -230,3 +230,28 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   Seg_Usuario.CancelaFactura. La web ahora escribe EcfEstadoDgii (sp_GuardarEstadoEcf). Probado en testecf:
   E340000000002 (50 al walk-in 318) y E340000000003 (anula la E310000000237, factura 9656) ACEPTADAS.
   Pendiente: la nota por monto no guarda quien autorizo en una tabla (Delphi no la autorizaba); queda en el log.
+
+## Etapa 8 (cafeteria): estudio de Delphi y decisiones del usuario (2026-10-23)
+- Delphi (RestaurantHotel\PrjCaja): mesas (faMesa, 42 en una seccion) -> cuenta abierta en FaFactura/FaFacturaDetalle
+  (EstatusFactura_id 1); articulos por Stp_FacturarUnArticulo (precio por Fn_Precio1 segun el Precio_id del cliente;
+  Precio2 = fraccion/trago, Tragos 2); articulo especial (referencia '00' alimentos art. 8, '**' bebidas art. 7);
+  pre-cuenta (FaFacturaDetalle.Impreso = 1, FaFacturaHoraImpresion); cobro (FaFacturaPago, STP_PasarACXC para el
+  credito, STP_PasarAlHotel, Stp_TransferirCerrarFactura -> FaTmpFactura) y e-CF (Comunes\uCreateXml.pas: el mismo XML
+  que EcfHotel, comprobado con E310000000233 y E320000006062 aceptadas). Numero: Max(FaFactura, FaTmpFactura) + 1.
+  Totales: ITBIS y propina sobre el subtotal, TRUNCADOS a 2 decimales (2236 de 2236 en 2026).
+- Cargo a la habitacion: cliente 2 (FaParametro.CuentaClienteHabitacion), sin e-NCF, pago forma 8 por el SUBTOTAL;
+  STP_PasarAlHotel lo agrega a la cuenta (servicio 7). Decision: SOLO si la reserva tiene credito
+  (HotelHabitacionReservada.Credito); Delphi avisaba pero dejaba cargar.
+- Fecha de la factura: la del dia (decision; Delphi usa FaParametro.FechaProceso).
+- Descuento: no se ofrece por ahora (decision). En Delphi las lineas del e-CF no llevan el descuento y no cuadran.
+- Pre-cuenta igual que Delphi: obligatoria antes de cobrar; lo impreso no cambia de cantidad ni precio.
+- No se usan (2026): camareros (siempre 1 LOCAL), guarniciones, libras. Si se usan: fraccion (173 lineas desde
+  2025-06), articulo especial (30), transferir mesa (Stp_TransferirMesas, FaLog).
+- Partes: 8a mesas y cuenta abierta (pre-cuenta, mover de mesa); 8b cobro con e-CF y ticket; 8c cargo a la
+  habitacion; 8d lista de facturas y notas E34 (faFacturaNC).
+- Parte 8a HECHA (2026-10-23, sin commit): menu Cafeteria (`/api/cafeteria/...`): mesas (libre / abierta / pre-cuenta),
+  cuenta abierta con articulos por codigo o familia (trago o botella), articulo especial, cantidades, borrar (lo impreso
+  no se borra ni cambia; queda en FaLog), pre-cuenta 80 mm (`/precuenta/{factura}`, Impreso = 1 y FaFacturaHoraImpresion)
+  y mover de mesa (libre: cambia Mesa_id; ocupada: une y cierra la vieja como Stp_TransferirMesas). Totales como Delphi:
+  ITBIS y propina truncados y el total de los montos sin truncar (609.38 -> 780.00). Fecha: la del dia al abrir (al
+  cobrar se pondra la del cobro). Probado en Hotel_new: cuentas 12792 (movida y unida) y 12793 (mesa 42, queda abierta).

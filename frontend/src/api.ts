@@ -857,3 +857,100 @@ export const crearNota = (origen: string, factura: number, d: { codigo: number; 
   pedir<ResultadoNota>(`/api/notas/${origen}/factura/${factura}`, { method: 'POST', body: JSON.stringify(d) })
 export const notaImpresa = (origen: string, numero: number) => pedir<NotaImpresa>(`/api/notas/${origen}/${numero}`)
 export const reenviarNota = (origen: string, numero: number) => pedir<EstadoEcf>(`/api/notas/${origen}/${numero}/enviar`, { method: 'POST' })
+
+// ---- etapa 8: cafeteria ----
+
+export type EstadoMesa = 'Libre' | 'Abierta' | 'PreCuenta'
+
+export interface MesaCafeteria {
+  mesa: number
+  descripcion: string
+  x: number
+  y: number
+  estado: EstadoMesa
+  factura: number | null
+  total: number
+  lineas: number
+  habitacion: number | null
+  abierta: string | null
+}
+
+export interface ArticuloCafeteria {
+  referencia: string
+  descripcion: string
+  familia: number
+  nombreFamilia: string
+  precio: number
+  /** precio por trago (fraccion); 0 si no se vende asi */
+  precio2: number
+  /** tragos por unidad; 1 = no se vende por trago */
+  fraccion: number
+}
+
+export interface LineaMesa {
+  secuencia: number
+  referencia: string
+  descripcion: string
+  cantidad: number
+  precio: number
+  importe: number
+  /** 1 = por unidad, 2 = por trago */
+  tragos: number
+  impreso: boolean
+}
+
+export interface CuentaMesa {
+  mesa: number
+  nombreMesa: string
+  factura: number
+  fecha: string
+  cliente: number
+  nombreCliente: string | null
+  habitacion: number | null
+  conItbis: boolean
+  conPropina: boolean
+  lineas: LineaMesa[]
+  totales: { subTotal: number; itbis: number; propina: number; total: number }
+  preCuentaAlDia: boolean
+  tasaDolar: number
+  abierta: string
+}
+
+export interface PreCuentaImpresa {
+  emisor: { rnc: string; razonSocial: string; direccion: string; telefono: string | null }
+  cuenta: CuentaMesa
+  hora: string
+  usuario: string | null
+}
+
+/** Como pedir, pero 204 (sin contenido) da null: la mesa esta libre. */
+async function pedirOpcional<T>(ruta: string, opciones: RequestInit = {}): Promise<T | null> {
+  const s = sesionGuardada()
+  const r = await fetch(ruta, {
+    ...opciones,
+    headers: { 'Content-Type': 'application/json', ...(s ? { Authorization: `Bearer ${s.token}` } : {}), ...opciones.headers },
+  })
+  if (r.status === 401 && s) {
+    guardar(null)
+    throw new SesionVencida('La sesion vencio: ingrese de nuevo.')
+  }
+  if (!r.ok) throw new Error((await r.text()) || `Error ${r.status}`)
+  return r.status === 204 ? null : ((await r.json()) as T)
+}
+
+const CAFE = '/api/cafeteria'
+export const mesasCafeteria = () => pedir<MesaCafeteria[]>(`${CAFE}/mesas`)
+export const articulosCafeteria = () => pedir<ArticuloCafeteria[]>(`${CAFE}/articulos`)
+export const cuentaMesa = (mesa: number) => pedirOpcional<CuentaMesa>(`${CAFE}/mesas/${mesa}`)
+export const agregarArticulo = (mesa: number, referencia: string, cantidad: number, porFraccion: boolean | null = null) =>
+  pedir<CuentaMesa>(`${CAFE}/mesas/${mesa}/lineas`, { method: 'POST', body: JSON.stringify({ referencia, cantidad, porFraccion }) })
+export const agregarEspecial = (mesa: number, bebida: boolean, descripcion: string, precio: number) =>
+  pedir<CuentaMesa>(`${CAFE}/mesas/${mesa}/especial`, { method: 'POST', body: JSON.stringify({ bebida, descripcion, precio }) })
+export const cambiarLineaMesa = (mesa: number, secuencia: number, cantidad: number, porFraccion: boolean | null = null) =>
+  pedir<CuentaMesa>(`${CAFE}/mesas/${mesa}/lineas/${secuencia}`, { method: 'PUT', body: JSON.stringify({ cantidad, porFraccion }) })
+export const borrarLineaMesa = (mesa: number, secuencia: number) =>
+  pedirOpcional<CuentaMesa>(`${CAFE}/mesas/${mesa}/lineas/${secuencia}`, { method: 'DELETE' })
+export const preCuentaMesa = (mesa: number) => pedir<PreCuentaImpresa>(`${CAFE}/mesas/${mesa}/precuenta`, { method: 'POST' })
+export const preCuentaImpresa = (factura: number) => pedir<PreCuentaImpresa>(`${CAFE}/cuentas/${factura}/precuenta`)
+export const moverMesa = (mesa: number, destino: number) =>
+  pedir<CuentaMesa>(`${CAFE}/mesas/${mesa}/mover`, { method: 'POST', body: JSON.stringify({ destino }) })

@@ -431,3 +431,50 @@ button.chico { padding: 0.15em 0.6em; font-size: 0.85em; }
   @page ticket { size: 80mm auto; margin: 3mm; }
 }
 .fila-nota td { background: rgba(200, 120, 0, 0.06); }
+
+/* ---- cafeteria (etapa 8a): mesas y cuenta abierta ---- */
+.m-Libre     { --f: var(--libre-fondo);   --b: var(--libre-borde); }
+.m-Abierta   { --f: var(--ocupada-fondo); --b: var(--ocupada-borde); }
+.m-PreCuenta { --f: var(--llega-fondo);   --b: var(--llega-borde); }
+.chip.m-Libre i, .chip.m-Abierta i, .chip.m-PreCuenta i { background: var(--f); border-color: var(--b); }
+.cafe-cuerpo { display: grid; gap: 16px; align-items: start; }
+.cafe-cuerpo.con-cuenta { grid-template-columns: minmax(0, 1fr) minmax(400px, 520px); }
+.cafe-mesas { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.cafe-mesas.chica { grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); max-height: 50vh; overflow: auto; margin: 10px 0; }
+.mesa {
+  display: grid; justify-items: center; gap: 0; min-height: 76px; padding: 6px 4px;
+  background: var(--f); color: var(--texto); border: 2px solid var(--b); border-radius: 8px;
+  font-variant-numeric: tabular-nums; font-size: 0.85rem; line-height: 1.25;
+}
+.mesa .num { font-size: 1.35rem; font-weight: 700; }
+.mesa.elegida { outline: 3px solid var(--primario); outline-offset: 2px; }
+.mesa:hover:not(:disabled) { filter: brightness(0.97); }
+.comanda {
+  position: sticky; top: 12px; display: grid; gap: 10px; padding: 14px; max-height: calc(100vh - 90px); overflow: auto;
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: 10px;
+}
+.comanda-cabeza { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
+.comanda-cabeza h3, .comanda-cabeza p { margin: 0; }
+.comanda-lineas td { vertical-align: middle; }
+.comanda-lineas .ticket-sub { color: var(--tenue); font-size: 0.8rem; }
+.comanda-lineas tr.impresa td { background: color-mix(in srgb, var(--llega-fondo) 55%, transparent); }
+.comanda-lineas .cant { white-space: nowrap; text-align: center; }
+.comanda-lineas .cant span { display: inline-block; min-width: 2.2em; text-align: center; font-weight: 600; }
+.comanda-lineas .cant button, .comanda-lineas .acciones button { padding: 0.15em 0.55em; }
+.comanda-lineas .acciones { white-space: nowrap; text-align: right; }
+.comanda-lineas .acciones button + button { margin-left: 4px; }
+.comanda-totales { margin: 0; }
+.comanda-botones { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; }
+.comanda-buscar { margin: 0; }
+.comanda-familias { flex-wrap: wrap; margin: 0; border-bottom: 0; }
+.comanda-familias button { border: 1px solid var(--borde); border-radius: 999px; padding: 0.2em 0.75em; font-size: 0.85rem; }
+.comanda-familias button.activo { background: var(--primario); color: var(--primario-texto); border-color: var(--primario); }
+.comanda-articulos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.comanda-articulos button { display: grid; text-align: left; gap: 2px; padding: 0.45em 0.6em; line-height: 1.25; }
+.comanda-articulos button .tenue { font-size: 0.8rem; }
+@media (max-width: 900px) {
+  .cafe-cuerpo.con-cuenta { grid-template-columns: 1fr; }
+  .comanda { position: static; max-height: none; }
+  .cafe-cuerpo.con-cuenta .cafe-mesas { grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); }
+  .cafe-cuerpo.con-cuenta .mesa { min-height: 56px; }
+}
