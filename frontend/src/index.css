@@ -338,6 +338,7 @@ button.chico { padding: 0.15em 0.6em; font-size: 0.85em; }
 .boton-cargo { background: var(--ocupada-borde); color: #fff; }
 .boton-pago { background: var(--ok); color: #fff; }
 .barra-cuenta .boton-mover { flex: 0 1 auto; font-weight: 500; }
+.modo-mover { display: flex; gap: 18px; flex-wrap: wrap; margin: 0 0 8px; }
 @media (prefers-color-scheme: dark) { .boton-cargo, .boton-pago { color: #0b1217; } }
 
 /* menu principal: fondo negro y letras blancas (pedido del usuario) */

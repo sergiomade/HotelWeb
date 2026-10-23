@@ -20,6 +20,8 @@ public sealed record SolicitudSalida(DateTime Salida, bool Todas, string? Coment
 /// <param name="Tarifa">Sin impuestos; null = la de ahora (mismo tipo y categoria) o la de la tabla de precios.</param>
 public sealed record SolicitudCambio(int Hasta, string? Categoria, decimal? Tarifa);
 
+public sealed record SolicitudTransferencia(int Hasta);
+
 /// <summary>
 /// Cargos a la cuenta de una habitacion (etapa 4). Cualquier usuario carga, como en Delphi; anular un cargo lo hacen
 /// los de Permisos:AnulanCargos.
@@ -32,19 +34,35 @@ public sealed class CuentasController : ControllerBase
     private readonly RepositorioRecibos _recibos;
     private readonly RepositorioSalidas _salidas;
     private readonly RepositorioCambioHabitacion _cambio;
+    private readonly RepositorioTransferencia _transferencia;
     private readonly PermisosWeb _permisos;
     private readonly ILogger<CuentasController> _log;
 
     public CuentasController(RepositorioCuentas cuentas, RepositorioRecibos recibos, RepositorioSalidas salidas,
-        RepositorioCambioHabitacion cambio, PermisosWeb permisos, ILogger<CuentasController> log)
+        RepositorioCambioHabitacion cambio, RepositorioTransferencia transferencia, PermisosWeb permisos, ILogger<CuentasController> log)
     {
         _cuentas = cuentas;
         _recibos = recibos;
         _salidas = salidas;
         _cambio = cambio;
+        _transferencia = transferencia;
         _permisos = permisos;
         _log = log;
     }
+
+    /// <summary>Para transferir a una habitacion ocupada: lo que pasa y las ocupadas.</summary>
+    [HttpGet("transferencia")]
+    public ActionResult<PreparacionTransferencia> PrepararTransferencia(int habitacion) => Hacer(() => _transferencia.Preparar(habitacion));
+
+    /// <summary>Transferir la cuenta a otra habitacion ocupada y cerrar la de origen (cualquier usuario, como en Delphi).</summary>
+    [HttpPost("transferencia")]
+    public ActionResult<ResultadoTransferencia> Transferir(int habitacion, SolicitudTransferencia s) => Hacer(() =>
+    {
+        var r = _transferencia.Transferir(habitacion, s.Hasta, Login);
+        _log.LogWarning("{Usuario} transfirio la habitacion {Desde} a la {Hasta}: cargos {Cargos}, pagos {Pagos}; origen cerrado en la {Cerrada}",
+            Login, habitacion, s.Hasta, r.Cargos, r.Pagos, r.Cerrada);
+        return r;
+    });
 
     /// <summary>Para cambiar a otra habitacion libre: lo que se cobra hoy y las libres.</summary>
     [HttpGet("cambio")]

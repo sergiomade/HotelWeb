@@ -651,3 +651,27 @@ export const cambiarHabitacion = (habitacion: number, hasta: number, categoria: 
   pedir<{ desde: number; hasta: number; factura: number; accion: string; avisos: string[] }>(`/api/cuentas/${habitacion}/cambio`, {
     method: 'POST', body: JSON.stringify({ hasta, categoria, tarifa }),
   })
+
+// ---- hospedaje: transferencia a una habitacion ocupada ----
+
+export interface OcupadaTransferencia { habitacion: number; factura: number; huesped: string | null; cliente: string | null; impuestos: string }
+
+export interface PreparacionTransferencia {
+  habitacion: number
+  factura: number
+  huesped: string | null
+  cliente: string | null
+  impuestos: string
+  /** Cargos sin impuestos que pasan en una linea. */
+  cargos: number
+  payOut: number
+  /** Pagos y adelantos (negativo) que pasan como pagos. */
+  pagos: number
+  saldo: number
+  ocupadas: OcupadaTransferencia[]
+}
+
+export const prepararTransferencia = (habitacion: number) => pedir<PreparacionTransferencia>(`/api/cuentas/${habitacion}/transferencia`)
+export const transferirCuenta = (habitacion: number, hasta: number) =>
+  pedir<{ desde: number; hasta: number; facturaDestino: number; cerrada: number | null; cargos: number; pagos: number; avisos: string[] }>(
+    `/api/cuentas/${habitacion}/transferencia`, { method: 'POST', body: JSON.stringify({ hasta }) })

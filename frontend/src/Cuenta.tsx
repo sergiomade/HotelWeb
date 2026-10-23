@@ -3,8 +3,9 @@ import Fondo from './Fondo'
 import RecibosCuenta from './RecibosCuenta'
 import {
   anularCargo, cambiarHabitacion, cambiarSalida, cargarACuenta, dinero, FACTOR_IMPUESTOS, fecha, obtenerCuenta, obtenerPrecios,
-  obtenerServicios, permisosCuenta, prepararCambio, seAnula, SesionVencida, verSalida,
-  type CuentaHabitacion, type HabitacionRack, type PantallaPrecios, type PreparacionCambio, type SalidaCuenta, type Servicio,
+  obtenerServicios, permisosCuenta, prepararCambio, prepararTransferencia, seAnula, SesionVencida, transferirCuenta, verSalida,
+  type CuentaHabitacion, type HabitacionRack, type PantallaPrecios, type PreparacionCambio, type PreparacionTransferencia,
+  type SalidaCuenta, type Servicio,
 } from './api'
 
 /** Panel con la cuenta abierta de una habitacion: cargos, pagos y saldo; agregar un cargo y anular uno. */
@@ -21,7 +22,7 @@ export default function Cuenta({ habitacion: h, alCerrar, alVencer, alCambiar }:
   const [error, setError] = useState('')
   const [avisos, setAvisos] = useState<string[]>([])
   // despues de mover la cuenta a otra habitacion: el panel muestra el resultado (esta habitacion ya quedo libre)
-  const [movida, setMovida] = useState<{ hasta: number; avisos: string[] } | null>(null)
+  const [movida, setMovida] = useState<{ hasta: number; avisos: string[]; transferida: boolean } | null>(null)
   const ocupada = h.situacion === 'Ocupada'
 
   const manejar = useCallback((e: unknown) => {
@@ -74,7 +75,11 @@ export default function Cuenta({ habitacion: h, alCerrar, alVencer, alCambiar }:
 
         {movida && (
           <div role="status">
-            <p className="ok-texto">La cuenta pasó a la habitación {movida.hasta}. La {h.numero} quedó libre.</p>
+            <p className="ok-texto">
+              {movida.transferida
+                ? `La cuenta se transfirió a la habitación ${movida.hasta} y la ${h.numero} se cerró (quedó libre).`
+                : `La cuenta pasó a la habitación ${movida.hasta}. La ${h.numero} quedó libre.`}
+            </p>
             {movida.avisos.map((a) => <p key={a} className="alerta">{a}</p>)}
             <div className="botones"><button type="button" onClick={alCerrar}>Cerrar</button></div>
           </div>
@@ -95,8 +100,8 @@ export default function Cuenta({ habitacion: h, alCerrar, alVencer, alCambiar }:
                   </div>
                 )}
                 {abierto === 'cambio' && (
-                  <CambiarHabitacion habitacion={h.numero} alError={manejar} alCerrar={() => setAbierto(null)}
-                                     alCambiar={(hasta, a) => { setMovida({ hasta, avisos: a }); setAbierto(null); alCambiar?.() }} />
+                  <MoverCuenta habitacion={h.numero} alError={manejar} alCerrar={() => setAbierto(null)}
+                               alCambiar={(hasta, a, transferida) => { setMovida({ hasta, avisos: a, transferida }); setAbierto(null); alCambiar?.() }} />
                 )}
                 {abierto === 'cargo' && (
                   <AgregarCargo habitacion={h.numero} alCargar={(c) => { actualizada(c); setAbierto(null) }}
@@ -292,6 +297,97 @@ function CambiarSalida({ habitacion, alCambiar, alCerrar, alError }: {
       <div className="botones">
         <button type="button" className="secundario" onClick={alCerrar}>Cancelar</button>
         <button type="submit" disabled={enviando || !nueva || igual}>{enviando ? 'Guardando...' : 'Cambiar salida'}</button>
+      </div>
+    </form>
+  )
+}
+
+/** Como Delphi (Transferir huesped): a una habitacion libre o a una ocupada. */
+function MoverCuenta({ habitacion, alCambiar, alCerrar, alError }: {
+  habitacion: number
+  alCambiar: (hasta: number, avisos: string[], transferida: boolean) => void
+  alCerrar: () => void
+  alError: (e: unknown) => void
+}) {
+  const [modo, setModo] = useState<'libre' | 'ocupada'>('libre')
+  return (
+    <>
+      <div className="modo-mover" role="radiogroup" aria-label="A qué habitación">
+        <label className="check"><input type="radio" checked={modo === 'libre'} onChange={() => setModo('libre')} /> A una libre</label>
+        <label className="check"><input type="radio" checked={modo === 'ocupada'} onChange={() => setModo('ocupada')} /> A una ocupada (transferir la cuenta)</label>
+      </div>
+      {modo === 'libre'
+        ? <CambiarHabitacion habitacion={habitacion} alError={alError} alCerrar={alCerrar} alCambiar={(h, a) => alCambiar(h, a, false)} />
+        : <TransferirCuenta habitacion={habitacion} alError={alError} alCerrar={alCerrar} alCambiar={(h, a) => alCambiar(h, a, true)} />}
+    </>
+  )
+}
+
+/**
+ * Transferir la cuenta a otra habitacion OCUPADA (decisiones del usuario 2026-10-23): los cargos pasan en una linea sin
+ * impuestos (la destino les pone los de su cliente), el PAY-OUT y los pagos pasan aparte, y esta habitacion se cierra
+ * en el mismo paso (sin e-NCF).
+ */
+function TransferirCuenta({ habitacion, alCambiar, alCerrar, alError }: {
+  habitacion: number
+  alCambiar: (hasta: number, avisos: string[]) => void
+  alCerrar: () => void
+  alError: (e: unknown) => void
+}) {
+  const [p, setP] = useState<PreparacionTransferencia | null>(null)
+  const [hasta, setHasta] = useState(0)
+  const [error, setError] = useState('')
+  const [enviando, setEnviando] = useState(false)
+
+  useEffect(() => {
+    prepararTransferencia(habitacion).then(setP).catch((e) => {
+      if (e instanceof SesionVencida) alError(e)
+      else setError(e instanceof Error ? e.message : String(e))
+    })
+  }, [habitacion, alError])
+
+  const destino = p?.ocupadas.find((o) => o.habitacion === hasta)
+
+  async function enviar(ev: FormEvent) {
+    ev.preventDefault()
+    if (!p || !destino) return
+    if (!window.confirm(`¿Transferir la cuenta de la ${habitacion} a la ${hasta} (${destino.huesped ?? ''})? La ${habitacion} se cierra y queda libre. No se puede deshacer.`)) return
+    setEnviando(true)
+    setError('')
+    try {
+      const r = await transferirCuenta(habitacion, hasta)
+      alCambiar(r.hasta, r.avisos)
+    } catch (e) {
+      if (e instanceof SesionVencida) alError(e)
+      else setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setEnviando(false)
+    }
+  }
+
+  if (!p) return error ? <p className="error" role="alert">{error}</p> : <p className="tenue">Cargando las habitaciones ocupadas...</p>
+  return (
+    <form className="grupo-cargo" onSubmit={enviar}>
+      <dl className="datos-lista">
+        <dt>Cargos</dt><dd>{dinero(p.cargos)} sin impuestos <span className="tenue">(aquí con {p.impuestos})</span></dd>
+        {p.payOut !== 0 && <><dt>PAY-OUT</dt><dd>{dinero(p.payOut)}</dd></>}
+        {p.pagos !== 0 && <><dt>Pagos</dt><dd>{dinero(p.pagos)} (pasan como pagos)</dd></>}
+        <dt>Saldo hoy</dt><dd>{dinero(p.saldo)}</dd>
+      </dl>
+      <label>Transferir a
+        <select value={hasta || ''} onChange={(e) => setHasta(Number(e.target.value))} autoFocus>
+          <option value="">Escoja la habitación ocupada...</option>
+          {p.ocupadas.map((o) => <option key={o.habitacion} value={o.habitacion}>{o.habitacion} · {o.huesped ?? ''}{o.cliente && o.cliente !== o.huesped ? ` (${o.cliente})` : ''}</option>)}
+        </select>
+      </label>
+      {destino && destino.impuestos !== p.impuestos && (
+        <p className="alerta">En la {destino.habitacion} los cargos se cobran con {destino.impuestos} (su cliente); aquí eran con {p.impuestos}.</p>
+      )}
+      <p className="tenue">Los cargos pasan en una línea y se facturan en la otra habitación. Esta cuenta se cierra sin e-NCF.</p>
+      {error && <p className="error" role="alert">{error}</p>}
+      <div className="botones">
+        <button type="button" className="secundario" onClick={alCerrar}>Cancelar</button>
+        <button type="submit" disabled={enviando || !destino}>{enviando ? 'Transfiriendo...' : 'Transferir y cerrar'}</button>
       </div>
     </form>
   )

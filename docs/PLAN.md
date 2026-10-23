@@ -173,3 +173,10 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   porque STP_CargarHospedajeDiario toma la primera (TOP 1 sin orden). Sin linea de reserva: solo cambia el numero.
 - Falta de la etapa 4: transferencia a ocupada (Stp_TransferiraOcupada; estudiar sus impuestos 1.018/1.010 y el
   0.28 del origen antes de usarla).
+- Etapa 4, parte 4c HECHA (2026-10-23): transferencia a ocupada (`/api/cuentas/{habitacion}/transferencia`). NO usa
+  Stp_TransferiraOcupada: pasa SUM(Importe) de todo (cargos sin impuestos mezclados con pagos con impuestos) y cierra el
+  origen x1.28 solo si el cliente lleva ITBIS (solo propina o E44 quedaban con saldo y sin check-out). Decisiones del
+  usuario: cargos en una linea servicio 9 (el destino les pone los impuestos de su cliente, como ya sale en el e-CF:
+  E320000006067 los lleva gravados), PAY-OUT aparte, pagos y adelantos pasan como pagos (quedan inactivos en el origen);
+  el origen queda en 0 y se cierra en el mismo paso con Stp_CHECKOUT (sin e-NCF). Todo en una transaccion.
+- ETAPA 4 COMPLETA salvo la impresion del recibo (despues). Siguiente: etapa 5, checkout con e-CF.
