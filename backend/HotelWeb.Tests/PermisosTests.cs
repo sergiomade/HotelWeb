@@ -83,6 +83,13 @@ public class PermisosTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task Ni_anular_cargos()
+    {
+        var r = await Cliente(99).PostAsync("/api/cuentas/102/cargos/1/anular", null);
+        Assert.Equal(HttpStatusCode.Forbidden, r.StatusCode);
+    }
+
+    [Fact]
     public async Task Sin_sesion_tampoco()
     {
         var r = await _f.CreateClient().PutAsJsonAsync("/api/catalogos/precios/1/A", new { conImpuestos = 3500m, personaAdicional = 0m });

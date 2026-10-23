@@ -13,13 +13,18 @@ public sealed class PermisosWeb
 {
     private readonly HashSet<int> _editanCatalogos;
     private readonly HashSet<int> _anulanAdelantos;
+    private readonly HashSet<int> _anulanCargos;
 
     public PermisosWeb(IConfiguration config)
     {
         _editanCatalogos = Lista(config, "Permisos:EditanCatalogos");
-        var anulan = config.GetSection("Permisos:AnulanAdelantos");
-        _anulanAdelantos = anulan.Exists() ? Lista(config, "Permisos:AnulanAdelantos") : _editanCatalogos;
+        _anulanAdelantos = ListaO(config, "Permisos:AnulanAdelantos", _editanCatalogos);
+        _anulanCargos = ListaO(config, "Permisos:AnulanCargos", _editanCatalogos);
     }
+
+    /// <summary>La lista de esa clave, o la de catalogos si no esta en appsettings.</summary>
+    private static HashSet<int> ListaO(IConfiguration config, string clave, HashSet<int> otra) =>
+        config.GetSection(clave).Exists() ? Lista(config, clave) : otra;
 
     private static HashSet<int> Lista(IConfiguration config, string clave) =>
         (config.GetSection(clave).Get<int[]>() ?? Array.Empty<int>()).ToHashSet();
@@ -27,4 +32,7 @@ public sealed class PermisosWeb
     public bool EditaCatalogos(int usuarioId) => _editanCatalogos.Contains(usuarioId);
 
     public bool AnulaAdelantos(int usuarioId) => _anulanAdelantos.Contains(usuarioId);
+
+    /// <summary>Anular un cargo de la cuenta de una habitacion (Permisos:AnulanCargos, o la de catalogos).</summary>
+    public bool AnulaCargos(int usuarioId) => _anulanCargos.Contains(usuarioId);
 }

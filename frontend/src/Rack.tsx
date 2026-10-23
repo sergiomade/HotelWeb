@@ -105,7 +105,7 @@ export default function Rack({ alVencer }: { alVencer: () => void }) {
         Actualizado {new Date(rack.hoy).toLocaleTimeString('es-DO', { hour: '2-digit', minute: '2-digit' })} · se refresca cada minuto
       </p>
 
-      {abierta && <Cuenta habitacion={abierta} alCerrar={() => setAbierta(null)} alVencer={alVencer} />}
+      {abierta && <Cuenta habitacion={abierta} alCerrar={() => setAbierta(null)} alVencer={alVencer} alCambiar={cargar} />}
     </section>
   )
 }

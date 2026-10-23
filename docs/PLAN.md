@@ -147,4 +147,8 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   cargar las de salida vencida. Probado contra Hotel_new (y limpiado). Pantalla Recepcion (Check-in | Cargar noche).
   Probada por el usuario. 133 pruebas.
   - Reserva: precios por tipo y categoria siempre a la vista (compactos, una linea; tocar uno lo usa), como Delphi.
-- Siguiente de la etapa 4: cargar servicios a la cuenta.
+- Siguiente de la etapa 4: cargar servicios a la cuenta.- Etapa 4, parte 2 HECHA (2026-10-22): cargos a la cuenta (`/api/cuentas/{habitacion}/cargos`, anular con
+  Permisos:AnulanCargos). Recalcula el encabezado de HotelFactura con ITBIS y propina TRUNCADOS a 2 decimales como
+  Delphi. No se cargan a mano los servicios 3, 7, 11; no se anulan pagos, adelantos, transferencias, cafeteria ni
+  PAY-OUT. Desde el panel de la cuenta del rack. Probado contra Hotel_new (102 restaurada) y por el usuario.
+  145 pruebas.

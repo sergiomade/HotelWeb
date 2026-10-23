@@ -532,6 +532,20 @@ export const verNoche = (noche: string) => pedir<CargaNoche>(`/api/hospedaje/noc
 export const cargarNoche = (noche: string, sinVencidas: boolean) =>
   pedir<{ noche: CargaNoche; cargadas: number }>(`/api/hospedaje/noche/${noche}?sinVencidas=${sinVencidas}`, { method: 'POST' })
 
+// ---- cargos a la cuenta de la habitacion ----
+
+export const permisosCuenta = () => pedir<{ anulaCargos: boolean }>('/api/cuentas/permisos')
+export const cargarACuenta = (habitacion: number, servicio: number, descripcion: string, cantidad: number, precio: number) =>
+  pedir<CuentaHabitacion>(`/api/cuentas/${habitacion}/cargos`, { method: 'POST', body: JSON.stringify({ servicio, descripcion, cantidad, precio }) })
+export const anularCargo = (habitacion: number, secuencia: number) =>
+  pedir<CuentaHabitacion>(`/api/cuentas/${habitacion}/cargos/${secuencia}/anular`, { method: 'POST' })
+
+/** Las lineas que se pueden anular desde la cuenta (la API lo vuelve a revisar). */
+export function seAnula(l: LineaCuenta): boolean {
+  const d = l.descripcion.toUpperCase()
+  return l.activo && l.importe > 0 && !d.startsWith('TRANSF') && !d.startsWith('CAFETERIA - FACTURA') && !d.startsWith('PAY-OUT')
+}
+
 /** Fecha de hoy (o +dias) como aaaa-mm-dd, en la hora local. */
 export function hoyIso(dias = 0): string {
   const d = new Date()
