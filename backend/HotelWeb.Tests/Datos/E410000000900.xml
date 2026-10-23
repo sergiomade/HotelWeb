@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<ECF>
+  <Encabezado>
+    <Version>1.0</Version>
+    <IdDoc>
+      <TipoeCF>41</TipoeCF>
+      <eNCF>E410000000900</eNCF>
+      <FechaVencimientoSecuencia>31-12-2028</FechaVencimientoSecuencia>
+      <IndicadorMontoGravado>0</IndicadorMontoGravado>
+      <TipoPago>1</TipoPago>
+    </IdDoc>
+    <Emisor>
+      <RNCEmisor>122006044</RNCEmisor>
+      <RazonSocialEmisor>HOTEL LAS CAOBAS, SRL</RazonSocialEmisor>
+      <DireccionEmisor>C/ Luis Enrique Carrón Esq. Av. S.Diego</DireccionEmisor>
+      <FechaEmision>17-10-2026</FechaEmision>
+    </Emisor>
+    <Comprador>
+      <RNCComprador>00101488674</RNCComprador>
+      <RazonSocialComprador>SERGIO DE JESUS MADE MONTAS</RazonSocialComprador>
+      <DireccionComprador>bella viasta</DireccionComprador>
+    </Comprador>
+    <Totales>
+      <MontoGravadoTotal>210.36</MontoGravadoTotal>
+      <MontoGravadoI1>210.36</MontoGravadoI1>
+      <MontoExento>375.25</MontoExento>
+      <ITBIS1>18</ITBIS1>
+      <TotalITBIS>37.86</TotalITBIS>
+      <TotalITBIS1>37.86</TotalITBIS1>
+      <MontoTotal>623.47</MontoTotal>
+      <TotalITBISRetenido>37.86</TotalITBISRetenido>
+      <TotalISRRetencion>11.26</TotalISRRetencion>
+    </Totales>
+  </Encabezado>
+  <DetallesItems>
+    <Item>
+      <NumeroLinea>1</NumeroLinea>
+      <IndicadorFacturacion>1</IndicadorFacturacion>
+      <Retencion>
+        <IndicadorAgenteRetencionoPercepcion>1</IndicadorAgenteRetencionoPercepcion>
+        <MontoITBISRetenido>15.30</MontoITBISRetenido>
+      </Retencion>
+      <NombreItem>azucar crema</NombreItem>
+      <IndicadorBienoServicio>1</IndicadorBienoServicio>
+      <CantidadItem>1.00</CantidadItem>
+      <UnidadMedida>43</UnidadMedida>
+      <PrecioUnitarioItem>85.0000</PrecioUnitarioItem>
+      <MontoItem>85.00</MontoItem>
+    </Item>
+    <Item>
+      <NumeroLinea>2</NumeroLinea>
+      <IndicadorFacturacion>1</IndicadorFacturacion>
+      <Retencion>
+        <IndicadorAgenteRetencionoPercepcion>1</IndicadorAgenteRetencionoPercepcion>
+        <MontoITBISRetenido>22.56</MontoITBISRetenido>
+      </Retencion>
+      <NombreItem>CAfe molidoSantoDomingo</NombreItem>
+      <IndicadorBienoServicio>1</IndicadorBienoServicio>
+      <CantidadItem>1.00</CantidadItem>
+      <UnidadMedida>43</UnidadMedida>
+      <PrecioUnitarioItem>125.3600</PrecioUnitarioItem>
+      <MontoItem>125.36</MontoItem>
+    </Item>
+    <Item>
+      <NumeroLinea>3</NumeroLinea>
+      <IndicadorFacturacion>4</IndicadorFacturacion>
+      <Retencion>
+        <IndicadorAgenteRetencionoPercepcion>1</IndicadorAgenteRetencionoPercepcion>
+        <MontoISRRetenido>11.26</MontoISRRetenido>
+      </Retencion>
+      <NombreItem>Chapeo del patio trasero de la casa</NombreItem>
+      <IndicadorBienoServicio>2</IndicadorBienoServicio>
+      <CantidadItem>1.00</CantidadItem>
+      <UnidadMedida>43</UnidadMedida>
+      <PrecioUnitarioItem>375.2500</PrecioUnitarioItem>
+      <MontoItem>375.25</MontoItem>
+    </Item>
+  </DetallesItems>
+  <FechaHoraFirma>17-10-2026 11:22:27</FechaHoraFirma>
+</ECF>

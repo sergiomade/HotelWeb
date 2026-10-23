@@ -323,3 +323,47 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   Hallazgos: (1) en Hotel_new los E43 1-3 ya se habian enviado desde Delphi (11 al 14/10) y sus gastos no estan en la
   tabla: el SP volvia a dar el 1; se puso SecuenciaDesdeEncf = 4 en Hotel_new. (2) La web buscaba el documento de
   WebEncf solo por e-NCF: ahora tambien por rncEmisor (DocumentosXml puede tener varias empresas, como en Delphi).
+- Parte 9d-3 HECHA (2026-10-23, sin commit): Compras > Compras a informales (E41) (`/api/compras`, ticket 80 mm
+  `/compra/{n}`): Stp_CrearCompraInformal (de Delphi; las lineas en XML <L d t c p g/>) revisa, calcula las retenciones
+  (100 % del ITBIS; ISR solo en servicios: P 15 %, A 10 %, T 3 %; neto = total - retenciones) y toma el E41. XML en C#
+  igual byte a byte a E410000000900 y E410000000901 aceptadas. El formulario muestra las retenciones y el neto antes de
+  emitir. Solo Permisos:ComprobantesEspeciales. El neto pagado en efectivo resta en el cuadre (MIG_26, Tipo C).
+  Probado en testecf: E410000000902 "Aceptado Condicional" (la cedula de prueba 00113918239 tiene digito valido pero no
+  esta en el padron: con una cedula real sale Aceptado, como las 900/901). ETAPA 9 COMPLETA (falta el commit de 9d-3).
+
+## Etapa 10 (puesta en marcha): lo que hace falta (2026-10-23, lista para ejecutar)
+1. Servidor: Windows con IIS + ASP.NET Core Hosting Bundle 8. `deploy\preparar-paquete.ps1` (aqui) y
+   `deploy\instalar-iis.ps1` (en el servidor, como administrador): sitio HotelWeb, puerto 8098, Jwt:Key aleatoria,
+   sitio detenido hasta configurar. appsettings.json del servidor: conexiones a la base real y a Seguridad (usuario de
+   SQL), Ecf:Ambiente = 3, listas de Permisos (EditanCatalogos, ComprobantesEspeciales...).
+2. Base (con respaldo antes): MIG_20 a MIG_26 en orden. Revisar en Catalogos > Secuencias e-CF el rango real y el
+   vencimiento de cada tipo (fuera del rango no emite).
+3. DGII: el servidor llega a WebEncf de produccion con el certificado del hotel; Parametro.UrlApiEcf (y ClaveApiEcf)
+   de la base real apuntan ahi. Una primera factura real de poco monto para confirmar "Aceptado".
+4. Estaciones: Chrome o Edge a http://servidor:8098; impresora POS 80 mm (cafeteria y recepcion: tickets, pre-cuenta,
+   E43, E41) e impresora carta (factura del check-out, notas, cuadre, reportes).
+5. Usuarios: los mismos de Delphi (misma clave). Anular con nota de credito: Seg_Usuario.CancelaFactura.
+6. Arranque recomendado: por area (p. ej. cafeteria 1-2 semanas, despues recepcion); Delphi sigue como respaldo.
+   Mientras convivan: el cuadre de Delphi postea los recibos de TODOS (usar solo el cuadre de la web); la cafeteria
+   de Delphi usa FechaProceso y la web la fecha del dia; no abrir la misma mesa en los dos.
+7. Falta (no impide arrancar): recibo de pago impreso, confirmacion de reserva impresa, nota de debito E33,
+   comprobante del cargo a la habitacion para la firma del huesped.
+8. Datos del usuario que faltan: servidor (nombre/IP, si tiene IIS), area y fecha de arranque, si la base real tiene
+   las migraciones de Delphi hasta MIG_19; commit de 9d-3 y MIG_26 en HotelPruebas.
+9. API e-CF en Azure (webencf-gqhge4beeteebnah.centralus-01.azurewebsites.net, la que usa Delphi del hotel): es una
+   version VIEJA de WebEncf, sin EnviarDesdeHotel, FirmarDesdeHotel ni DocumentosXml (los que usa la web). El codigo
+   actual esta en C:\Proyecto_Dgii\WebEncf (Azure DevOps FacturasElectronicasApi): tiene esos servicios y conserva
+   todos los viejos. Cada instalacion es de UNA empresa (Dgii2: Rnc, Empresa, NoAmbiente; CnMadAlc = base de la
+   empresa con FacturaXml; CnEcf = base comun de DocumentosXml). Para usarla: respaldo de lo publicado, publicar la
+   version actual, en Azure CnMadAlc = base real del hotel, Rnc 122006044, ambiente ecf, certificado del hotel; en la
+   base Parametro.UrlApiEcf = esa direccion y ClaveApiEcf; hacerlo sin facturacion y probar con una factura pequena.
+   Pendiente del usuario: si esa instancia es solo del hotel; si preparo el paquete y quien lo sube.
+10. Paquete de WebEncf para Azure listo (2026-10-23): `C:\Publish_WebEncf_Azure` (WebEncf_app.zip sin appsettings,
+    app\, sql\01 02 04, appsettings.EJEMPLO.json, LEEME.md con respaldo, publicar por Kudu sin borrar, comprobar y
+    volver atras). OJO: la 8005 local (LasCaobasSite, C:\Publish_LasCaobas) es una compilacion ANTERIOR: el paquete
+    agrega Certificado/Diagnostico y cambia la carga del certificado; probarlo primero en local antes de Azure.
+11. Paquete de WebEncf PROBADO en local (2026-10-23): en la 8005 (respaldo en C:\Publish_LasCaobas_respaldo_20261023)
+    HotelWeb envio a testecf E320000006075 (RFCE), E310000000242, E340000000008 y E430000000006: ACEPTADAS. La version
+    nueva lee el certificado cifrado de CertificadoClaves (CnEcf) con CertKeyEncryption:MasterKey, que esta en el
+    web.config de cada sitio: el paquete NO trae web.config (la primera prueba lo piso y la API fallo; se restauro). La
+    8005 queda con la version nueva. En Azure: confirmar donde esta la MasterKey antes de publicar.

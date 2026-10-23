@@ -1132,3 +1132,35 @@ export const listarGastos = (desde: string, hasta: string) => pedir<PantallaGast
 export const crearGasto = (g: NuevoGasto) => pedir<{ numero: number; encf: string; dgii: EstadoEcf }>('/api/gastos', { method: 'POST', body: JSON.stringify(g) })
 export const ticketGasto = (numero: number) => pedir<TicketGasto>(`/api/gastos/${numero}/ticket`)
 export const reenviarGasto = (numero: number) => pedir<EstadoEcf>(`/api/gastos/${numero}/enviar`, { method: 'POST' })
+
+// ---- etapa 9d: compras a informales (E41) ----
+
+export interface CompraLista { numero: number; fecha: string; encf: string; cedula: string; proveedor: string; total: number; retenido: number; netoPagar: number; formaPago: string; usuario: string | null; dgii: EstadoEcf | null }
+
+export interface PantallaCompras { compras: CompraLista[]; puedeCrear: boolean; formasPago: Record<string, string>; tiposGasto: Record<string, string>; retencionesIsr: Record<string, string> }
+
+export interface LineaCompra { descripcion: string; bienServicio: number; cantidad: number; precio: number; gravado: boolean; monto?: number; itbis?: number; itbisRetenido?: number; isrRetenido?: number }
+
+export interface NuevaCompra {
+  fecha: string; fechaPago: string; cedula: string; proveedor: string; direccion: string; verificado: boolean; tipoIsr: string
+  formaPago: string; tipoGasto: string; observacion: string; lineas: LineaCompra[]
+}
+
+export interface TicketCompra {
+  compra: {
+    encf: string; numero: number; fecha: string; fechaPago: string; cedula: string; proveedor: string; direccion: string | null; tipoIsr: string
+    formaPago: string; tipoGasto: string; observacion: string | null; lineas: Required<LineaCompra>[]; montoGravado: number; montoExento: number
+    itbis: number; total: number; itbisRetenido: number; isrRetenido: number; netoPagar: number; usuario: string | null
+  }
+  emisor: { rnc: string; razonSocial: string; direccion: string; telefono: string | null }
+  vencimiento: string | null
+  formaPago: string
+  tipoGasto: string
+  retencionIsr: string
+  timbre: { codigoSeguridad: string | null; fechaHoraFirma: string | null; url: string | null }
+}
+
+export const listarCompras = (desde: string, hasta: string) => pedir<PantallaCompras>(`/api/compras?desde=${desde}&hasta=${hasta}`)
+export const crearCompra = (c: NuevaCompra) => pedir<{ numero: number; encf: string; dgii: EstadoEcf }>('/api/compras', { method: 'POST', body: JSON.stringify(c) })
+export const ticketCompra = (numero: number) => pedir<TicketCompra>(`/api/compras/${numero}/ticket`)
+export const reenviarCompra = (numero: number) => pedir<EstadoEcf>(`/api/compras/${numero}/enviar`, { method: 'POST' })

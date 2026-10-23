@@ -38,6 +38,7 @@ builder.Services.AddSingleton<HotelWeb.Api.Caja.RepositorioCaja>();
 builder.Services.AddSingleton<HotelWeb.Api.Reportes.RepositorioReportes>();
 builder.Services.AddSingleton<HotelWeb.Api.Ecf.RepositorioSecuencias>();
 builder.Services.AddSingleton<HotelWeb.Api.Ecf.RepositorioGastos>();
+builder.Services.AddSingleton<HotelWeb.Api.Ecf.RepositorioCompras>();
 builder.Services.AddSingleton<PermisosWeb>();
 
 // ---- sesion: token JWT; todo la pide salvo el ingreso y el ping ----

@@ -19,7 +19,7 @@ public sealed record TimbreEcf(string? CodigoSeguridad, string? FechaHoraFirma, 
 /// De donde sale el documento: el check-out (HotelTmpFactura), el walk-in (HotelFacturaWalking) y sus notas de credito
 /// (HotelFacturaNC, HotelFacturaWalkingNC), y la cafeteria (FaTmpFactura). Cada uno numera aparte.
 /// </summary>
-public enum OrigenFactura { Hospedaje, WalkIn, NotaHospedaje, NotaWalkIn, Cafeteria, NotaCafeteria, GastoMenor }
+public enum OrigenFactura { Hospedaje, WalkIn, NotaHospedaje, NotaWalkIn, Cafeteria, NotaCafeteria, GastoMenor, CompraInformal }
 
 /// <summary>
 /// Arma el e-CF de una factura cerrada (HotelTmpFactura), lo guarda en FacturaXml (sp_GuardarFacturaXml) y lo envia por
@@ -76,6 +76,7 @@ public sealed class ServicioEcf
         if (origen == OrigenFactura.WalkIn) return LeerWalkIn(cn, tx, numero);
         if (origen == OrigenFactura.Cafeteria) return LeerCafeteria(cn, tx, numero);
         if (origen == OrigenFactura.GastoMenor) return LeerGasto(cn, tx, numero) is { } g ? GastoMenorEcf.ComoFactura(g) : null;
+        if (origen == OrigenFactura.CompraInformal) return LeerCompra(cn, tx, numero) is { } co ? CompraInformalEcf.ComoFactura(co) : null;
         return LeerNota(cn, tx, origen, numero) is { } n ? ComoFactura(n.Nota, n.Original) : null;
     }
 
@@ -93,6 +94,45 @@ public sealed class ServicioEcf
             """, new { numero = (int)numero }, tx)
             .Select(x => new GastoMenor(x.Ncf, x.Id, x.Fecha.Date, x.Descripcion, x.Bs, x.Cantidad, x.Precio, x.Total, x.FormaPago, x.TipoGasto,
                 x.Beneficiario, x.Cedula, x.Detalle, x.Usuario)).FirstOrDefault();
+
+    /// <summary>La compra a un proveedor informal con sus lineas (HotelCompraInformal, MIG_16).</summary>
+    internal static CompraInformal? LeerCompra(IDbConnection cn, IDbTransaction? tx, long numero)
+    {
+        var c = cn.QueryFirstOrDefault<FilaCompra>("SELECT * FROM HotelCompraInformal WHERE Compra_id = @numero", new { numero = (int)numero }, tx);
+        if (c is null) return null;
+        var lineas = cn.Query<(string Descripcion, byte Bs, decimal Cantidad, decimal Precio, bool Gravado, decimal Monto, decimal Itbis, decimal ItbisRet,
+                decimal IsrRet)>("""
+            SELECT RTRIM(Descripcion), TipoBienServicio, Cantidad, Precio, Gravado, Monto, Itbis, ItbisRetenido, IsrRetenido
+            FROM HotelCompraInformalLinea WHERE Compra_id = @numero ORDER BY NumeroLinea
+            """, new { numero = (int)numero }, tx)
+            .Select(l => new LineaCompra(l.Descripcion, l.Bs, l.Cantidad, l.Precio, l.Gravado, l.Monto, l.Itbis, l.ItbisRet, l.IsrRet)).ToList();
+        return new CompraInformal(c.NCF.Trim(), c.Compra_id, c.Fecha.Date, c.FechaPago.Date, c.Cedula.Trim(), c.Proveedor.Trim(), c.Direccion?.Trim(),
+            c.TipoRetencionIsr.Trim(), c.FormaPago.Trim(), c.TipoGasto606.Trim(), c.Observacion?.Trim(), lineas, c.MontoGravado, c.MontoExento, c.Itbis,
+            c.Total, c.ItbisRetenido, c.IsrRetenido, c.NetoPagar, c.Usuario?.Trim());
+    }
+
+    private sealed class FilaCompra
+    {
+        public int Compra_id { get; set; }
+        public string NCF { get; set; } = "";
+        public DateTime Fecha { get; set; }
+        public DateTime FechaPago { get; set; }
+        public string Cedula { get; set; } = "";
+        public string Proveedor { get; set; } = "";
+        public string? Direccion { get; set; }
+        public string TipoRetencionIsr { get; set; } = "";
+        public string FormaPago { get; set; } = "";
+        public string TipoGasto606 { get; set; } = "";
+        public string? Observacion { get; set; }
+        public decimal MontoGravado { get; set; }
+        public decimal MontoExento { get; set; }
+        public decimal Itbis { get; set; }
+        public decimal Total { get; set; }
+        public decimal ItbisRetenido { get; set; }
+        public decimal IsrRetenido { get; set; }
+        public decimal NetoPagar { get; set; }
+        public string? Usuario { get; set; }
+    }
 
     internal static FacturaEcf? LeerCafeteria(IDbConnection cn, IDbTransaction? tx, long numero)
     {
@@ -250,6 +290,13 @@ public sealed class ServicioEcf
                 var n = LeerNota(cn, null, origen, numero) ?? throw new ErrorCatalogo($"No existe la nota de credito {numero}.");
                 f = ComoFactura(n.Nota, n.Original);
                 xml = NotaCreditoEcf.Xml(n.Nota, n.Original, Emisor(cn), DateTime.Now);
+            }
+            else if (origen == OrigenFactura.CompraInformal)
+            {
+                // la compra a informal (E41): siempre el e-CF completo; el comprador es el proveedor
+                var co = LeerCompra(cn, null, numero) ?? throw new ErrorCatalogo($"No existe la compra {numero}.");
+                f = CompraInformalEcf.ComoFactura(co);
+                xml = CompraInformalEcf.Xml(co, Emisor(cn), FechaVencimiento(cn, co.Encf), DateTime.Now);
             }
             else if (origen == OrigenFactura.GastoMenor)
             {
