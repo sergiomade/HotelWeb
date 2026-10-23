@@ -430,3 +430,4 @@ button.chico { padding: 0.15em 0.6em; font-size: 0.85em; }
   .ticket { page: ticket; }
   @page ticket { size: 80mm auto; margin: 3mm; }
 }
+.fila-nota td { background: rgba(200, 120, 0, 0.06); }

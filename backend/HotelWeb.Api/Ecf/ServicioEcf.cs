@@ -15,8 +15,11 @@ public sealed record EstadoEcf(string Encf, long Factura, string Estado, string?
 /// <summary>Los datos del QR y de la representacion impresa (DocumentosXml, el registro del e-CF completo).</summary>
 public sealed record TimbreEcf(string? CodigoSeguridad, string? FechaHoraFirma, string? Url);
 
-/// <summary>De donde sale la factura: el check-out (HotelTmpFactura) o el walk-in (HotelFacturaWalking). Numeran aparte.</summary>
-public enum OrigenFactura { Hospedaje, WalkIn }
+/// <summary>
+/// De donde sale el documento: el check-out (HotelTmpFactura), el walk-in (HotelFacturaWalking) y sus notas de credito
+/// (HotelFacturaNC, HotelFacturaWalkingNC). Cada uno numera aparte.
+/// </summary>
+public enum OrigenFactura { Hospedaje, WalkIn, NotaHospedaje, NotaWalkIn }
 
 /// <summary>
 /// Arma el e-CF de una factura cerrada (HotelTmpFactura), lo guarda en FacturaXml (sp_GuardarFacturaXml) y lo envia por
@@ -70,7 +73,46 @@ public sealed class ServicioEcf
     {
         if (origen == OrigenFactura.Hospedaje) return Leer(cn, tx, numero, out transferida);
         transferida = false;
-        return LeerWalkIn(cn, tx, numero);
+        if (origen == OrigenFactura.WalkIn) return LeerWalkIn(cn, tx, numero);
+        return LeerNota(cn, tx, origen, numero) is { } n ? ComoFactura(n.Nota, n.Original) : null;
+    }
+
+    private sealed class FilaNota
+    {
+        public decimal Devolucion_id { get; set; }
+        public decimal Original_id { get; set; }
+        public DateTime Fecha { get; set; }
+        public string? NCF { get; set; }
+        public decimal? Total { get; set; }
+        public int? CodigoModificacion { get; set; }
+        public string? RazonModificacion { get; set; }
+    }
+
+    /// <summary>La nota de credito y su factura original, como CrearNotaCreditoXml / CrearNotaCreditoXmlWalking.</summary>
+    internal static (NotaCredito Nota, OriginalNota Original, long OriginalId)? LeerNota(IDbConnection cn, IDbTransaction? tx, OrigenFactura origen, long devolucion)
+    {
+        var walk = origen == OrigenFactura.NotaWalkIn;
+        var n = cn.QueryFirstOrDefault<FilaNota>(walk
+            ? """
+              SELECT Devolucion_id, FacturaWalking_id AS Original_id, Fecha, RTRIM(NCF) AS NCF, Total, CodigoModificacion, RTRIM(RazonModificacion) AS RazonModificacion
+              FROM HotelFacturaWalkingNC WHERE Devolucion_id = @devolucion
+              """
+            : """
+              SELECT Devolucion_id, Factura_id AS Original_id, Fecha, RTRIM(NCF) AS NCF, Total, CodigoModificacion, RTRIM(RazonModificacion) AS RazonModificacion
+              FROM HotelFacturaNC WHERE Devolucion_id = @devolucion
+              """, new { devolucion }, tx);
+        if (n is null) return null;
+        var o = (walk ? LeerWalkIn(cn, tx, (long)n.Original_id) : Leer(cn, tx, (long)n.Original_id, out _))
+                ?? throw new ErrorCatalogo($"No se encontro la factura original de la nota {devolucion}.");
+        return (new NotaCredito(n.NCF ?? "", (long)n.Devolucion_id, n.Fecha.Date, n.Total ?? 0, n.CodigoModificacion ?? 0, n.RazonModificacion),
+            new OriginalNota(o.Encf, o.Fecha, o.Rnc, o.NombreCliente, o.SubTotal, o.Itbis, o.Propina), (long)n.Original_id);
+    }
+
+    /// <summary>La nota vista como un e-CF (para el estado y el QR): el comprador del original y el MontoTotal de la E34.</summary>
+    internal static FacturaEcf ComoFactura(NotaCredito n, OriginalNota o)
+    {
+        var d = NotaCreditoEcf.Desglose(n.Monto, n.Codigo, o);
+        return new FacturaEcf(n.Encf, n.Numero, n.Fecha, o.Rnc, o.Nombre, d.Gravado + d.Exento, d.Itbis, d.Propina, false, Array.Empty<ItemEcf>());
     }
 
     /// <summary>
@@ -153,10 +195,20 @@ public sealed class ServicioEcf
         FilaParametro p;
         using (var cn = _conexiones.Hotel())
         {
-            f = Leer(cn, null, origen, numero, out var transferida) ?? throw new ErrorCatalogo($"No existe la factura {numero}.");
-            if (transferida) throw new ErrorCatalogo("La factura es de una cuenta transferida: no va a la DGII.");
+            if (origen is OrigenFactura.NotaHospedaje or OrigenFactura.NotaWalkIn)
+            {
+                // la nota de credito (E34): siempre el e-CF completo (no hay resumen)
+                var n = LeerNota(cn, null, origen, numero) ?? throw new ErrorCatalogo($"No existe la nota de credito {numero}.");
+                f = ComoFactura(n.Nota, n.Original);
+                xml = NotaCreditoEcf.Xml(n.Nota, n.Original, Emisor(cn), DateTime.Now);
+            }
+            else
+            {
+                f = Leer(cn, null, origen, numero, out var transferida) ?? throw new ErrorCatalogo($"No existe la factura {numero}.");
+                if (transferida) throw new ErrorCatalogo("La factura es de una cuenta transferida: no va a la DGII.");
+                xml = EcfHotel.Ecf(f, Emisor(cn), FechaVencimiento(cn, f.Encf), DateTime.Now);
+            }
             p = Parametro(cn);
-            xml = EcfHotel.Ecf(f, Emisor(cn), FechaVencimiento(cn, f.Encf), DateTime.Now);
             Guardar(cn, f.Encf, numero, "ECF", xml);
         }
         if (string.IsNullOrWhiteSpace(p.UrlApiEcf)) return new EstadoEcf(f.Encf, numero, "Sin enviar", "Falta Parametro.UrlApiEcf.", false);
@@ -317,8 +369,38 @@ public sealed class ServicioEcf
         string? mensajes = null;
         if (resp is { } rr && rr.TryGetProperty("mensajes", out var m) && m.ValueKind == JsonValueKind.Array)
             mensajes = string.Join("; ", m.EnumerateArray().Select(x => Texto(x, "valor")).Where(x => !string.IsNullOrWhiteSpace(x)));
+        if (resp is { } dgii)
+            GuardarEstado(f.Encf, numero, Texto(d, "tipoDocumento") ?? "ECF", estado,
+                int.TryParse(Texto(dgii, "codigo"), out var c) ? c : null, mensajes, Texto(d, "trackId"));
         return new EstadoEcf(f.Encf, numero, estado, string.IsNullOrWhiteSpace(mensajes) ? null : mensajes,
             estado.StartsWith("Aceptado", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// La respuesta de la DGII en EcfEstadoDgii (sp_GuardarEstadoEcf), como el monitor de Delphi (UFrmEstadoEcf): la
+    /// leen el monitor, los listados de pendientes y Stp_AnularFacturaHotelNC (exige la factura aceptada, codigo 1 o 4).
+    /// Si falla no importa: se vuelve a guardar en la proxima consulta.
+    /// </summary>
+    private void GuardarEstado(string encf, long numero, string tipo, string estado, int? codigo, string? mensaje, string? trackId)
+    {
+        try
+        {
+            using var cn = _conexiones.Hotel();
+            cn.Execute("dbo.sp_GuardarEstadoEcf", new
+            {
+                eNCF = new DbString { Value = encf, IsAnsi = true, Length = 19 },
+                InvFactura = (int)numero,
+                TipoEnvio = new DbString { Value = tipo, IsAnsi = true, Length = 10 },
+                Estado = new DbString { Value = estado.Length > 40 ? estado[..40] : estado, IsAnsi = true, Length = 40 },
+                Codigo = codigo,
+                Mensaje = new DbString { Value = mensaje is { Length: > 2000 } x ? x[..2000] : mensaje ?? "", IsAnsi = false, Length = 2000 },
+                TrackId = new DbString { Value = trackId ?? "", IsAnsi = true, Length = 60 },
+            }, commandType: CommandType.StoredProcedure);
+        }
+        catch (Exception e) when (e is Microsoft.Data.SqlClient.SqlException or InvalidOperationException)
+        {
+            _log.LogWarning(e, "No se pudo guardar el estado de {Encf} en EcfEstadoDgii", encf);
+        }
     }
 
     /// <summary>El registro mas nuevo de DocumentosXml de ese e-NCF y tipo (la API filtra por fecha de creacion).</summary>

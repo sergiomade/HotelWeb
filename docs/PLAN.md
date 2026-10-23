@@ -216,3 +216,17 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   Lo aplicado en el recibo y la devuelta en su concepto ("recibido X, devuelta Y"); la devuelta solo sale del efectivo.
   Los walk-in salen en Recepcion > Facturas (estado DGII por e-NCF). Probado en testecf: E320000006071 (walk-in 318,
   efectivo con devuelta) y E310000000238 (319, tarjeta, con propina) ACEPTADAS; se dejan en Hotel_new.
+
+## Etapa 7 (notas de credito E34): decisiones del usuario (2026-10-23)
+- Las dos de Delphi: anulacion total (codigo 1, Stp_AnularFacturaHotelNC, registro en HotelFacturaAnulada) y nota por
+  monto (codigo 3, hasta el balance pendiente; como UFrmMntNCFrontDesk/NCWalking), de check-out y de walk-in.
+- Autoriza un responsable con su usuario y clave (como PedirAutorizacion de Delphi) y el motivo es obligatorio.
+- E33 (nota de debito): despues, si hace falta (Delphi no la tiene).
+- Hallazgo: la web no escribia EcfEstadoDgii (lo llena el monitor de Delphi con sp_GuardarEstadoEcf) y
+  Stp_AnularFacturaHotelNC lo exige: la web guarda ahi cada respuesta de la DGII.
+- Etapa 7 HECHA (2026-10-23): notas de credito E34 desde Recepcion > Facturas (`/api/notas/{hospedaje|walkin}/...`,
+  impresion `/nota/{origen}/{n}`). E34 en C# igual byte a byte a la de Delphi aceptada (E340000000001). Anulacion total
+  con Stp_AnularFacturaHotelNC (HotelFacturaAnulada); nota por monto como SalvarNC (codigo 3). Responsable con
+  Seg_Usuario.CancelaFactura. La web ahora escribe EcfEstadoDgii (sp_GuardarEstadoEcf). Probado en testecf:
+  E340000000002 (50 al walk-in 318) y E340000000003 (anula la E310000000237, factura 9656) ACEPTADAS.
+  Pendiente: la nota por monto no guarda quien autorizo en una tabla (Delphi no la autorizaba); queda en el log.

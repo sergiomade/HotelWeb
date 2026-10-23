@@ -153,6 +153,6 @@ public sealed class RepositorioWalkIn
             {
                 var e = new FacturaEcf(x.Ncf ?? "", (long)x.Numero, x.Fecha.Date, x.Rnc, x.Nombre, x.SubTotal ?? 0, x.Itbis ?? 0, x.Propina ?? 0,
                     false, Array.Empty<ItemEcf>());
-                return (new FacturaCerrada((long)x.Numero, x.Fecha, 0, x.Nombre, null, x.Ncf, e.Total, false, null, true), e);
+                return (new FacturaCerrada((long)x.Numero, x.Fecha, 0, x.Nombre, null, x.Ncf, e.Total, false, null, true, "WalkIn"), e);
             }).ToList();
 }

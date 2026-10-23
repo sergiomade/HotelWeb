@@ -16,9 +16,11 @@ public sealed record PreparacionCheckout(int Habitacion, long Factura, string? C
 public sealed record ResultadoCheckout(long Numero, string? Encf, decimal Total, bool Transferida);
 
 /// <summary>Una factura cerrada en la lista, con su estado en la DGII (null si no lleva e-NCF).</summary>
-/// <param name="WalkIn">Del walk-in (HotelFacturaWalking, numera aparte; Habitacion 0).</param>
+/// <param name="WalkIn">Del walk-in (HotelFacturaWalking, numera aparte; Habitacion 0), o nota de un walk-in.</param>
+/// <param name="Origen">Hospedaje, WalkIn, NotaHospedaje o NotaWalkIn.</param>
+/// <param name="Modifica">En una nota de credito: el e-NCF de la factura que modifica.</param>
 public sealed record FacturaCerrada(long Numero, DateTime Fecha, int Habitacion, string? Cliente, string? Huesped, string? Encf,
-    decimal Total, bool Transferida, EstadoEcf? Dgii, bool WalkIn = false);
+    decimal Total, bool Transferida, EstadoEcf? Dgii, bool WalkIn = false, string Origen = "Hospedaje", string? Modifica = null);
 
 public sealed record LineaImpresa(DateTime? Fecha, string Descripcion, decimal Cantidad, decimal Precio, decimal Importe);
 
@@ -175,6 +177,7 @@ public sealed class RepositorioCheckout
                 }).ToList();
             // los walk-in del mismo rango (numeran aparte)
             filas.AddRange(RepositorioWalkIn.Lista(cn, desde, hasta, t));
+            filas.AddRange(RepositorioNotas.Lista(cn, desde, hasta, t));
         }
         var estados = await ecf.Estados(filas.Where(x => !x.F.Transferida).Select(x => x.E).ToList());
         return filas.Select(x => x.F with { Dgii = x.F.Encf is { } e && estados.TryGetValue(e, out var s) ? s : null })

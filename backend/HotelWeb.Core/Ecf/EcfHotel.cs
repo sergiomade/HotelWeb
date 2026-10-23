@@ -68,7 +68,7 @@ public static class EcfHotel
     public static string Ecf(FacturaEcf f, EmisorEcf e, DateTime fechaVencimiento, DateTime fechaHoraFirma)
     {
         if (Validar(f) is { } motivo) throw new ErrorEcf(motivo);
-        var x = new Xml();
+        var x = new XmlDelphi();
         x.Abrir("ECF");
         x.Abrir("Encabezado");
         x.Nodo("Version", "1.0");
@@ -186,7 +186,7 @@ public static class EcfHotel
     public static string Rfce(FacturaEcf f, EmisorEcf e, string codigoSeguridad)
     {
         if (string.IsNullOrWhiteSpace(codigoSeguridad)) throw new ErrorEcf($"No se tiene el codigo de seguridad del E32 {f.Encf}: no se puede crear el RFCE.");
-        var x = new Xml();
+        var x = new XmlDelphi();
         x.Abrir("RFCE");
         x.Abrir("Encabezado");
         x.Nodo("Version", "1.0");
@@ -246,32 +246,4 @@ public static class EcfHotel
 
     private static string Fecha(DateTime d) => d.ToString("dd-MM-yyyy", CultureInfo.InvariantCulture);
     private static string M(decimal v) => v.ToString("0.00", CultureInfo.InvariantCulture);
-
-    /// <summary>Como el XML de Delphi (TXMLDocument, doNodeAutoIndent): 2 espacios, CRLF.</summary>
-    private sealed class Xml
-    {
-        private readonly StringBuilder _sb = new("<?xml version=\"1.0\"?>\r\n");
-        private readonly Stack<string> _abiertos = new();
-
-        private string Sangria => new(' ', _abiertos.Count * 2);
-
-        public void Abrir(string nombre)
-        {
-            _sb.Append(Sangria).Append('<').Append(nombre).Append(">\r\n");
-            _abiertos.Push(nombre);
-        }
-
-        public void Cerrar()
-        {
-            var n = _abiertos.Pop();
-            _sb.Append(Sangria).Append("</").Append(n).Append(">\r\n");
-        }
-
-        public void Nodo(string nombre, string valor) =>
-            _sb.Append(Sangria).Append('<').Append(nombre).Append('>').Append(Escapar(valor)).Append("</").Append(nombre).Append(">\r\n");
-
-        public string Texto() => _sb.ToString();
-
-        private static string Escapar(string s) => s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;");
-    }
 }

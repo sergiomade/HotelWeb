@@ -752,6 +752,10 @@ export interface FacturaCerrada {
   dgii: EstadoEcf | null
   /** del walk-in (numera aparte; habitacion 0) */
   walkIn: boolean
+  /** Hospedaje, WalkIn, NotaHospedaje o NotaWalkIn */
+  origen: string
+  /** en una nota de credito: el e-NCF que modifica */
+  modifica: string | null
 }
 
 export const listarFacturas = (desde: string, hasta: string, texto: string) =>
@@ -803,3 +807,53 @@ export interface TicketWalkIn {
 export const crearWalkIn = (w: NuevoWalkIn) => pedir<RespuestaWalkIn>('/api/walkins', { method: 'POST', body: JSON.stringify(w) })
 export const ticketWalkIn = (numero: number) => pedir<TicketWalkIn>(`/api/walkins/${numero}/ticket`)
 export const reenviarWalkIn = (numero: number) => pedir<EstadoEcf>(`/api/walkins/${numero}/enviar`, { method: 'POST' })
+
+// ---- etapa 7: notas de credito E34 ----
+
+export interface NotaPrevia { numero: number; encf: string | null; fecha: string; total: number; codigo: number | null; razon: string | null }
+
+export interface PreparacionNota {
+  origen: 'hospedaje' | 'walkin'
+  factura: number
+  encf: string
+  fecha: string
+  cliente: string | null
+  rnc: string | null
+  subTotal: number
+  itbis: number
+  propina: number
+  total: number
+  dgii: EstadoEcf
+  notas: NotaPrevia[]
+  pendiente: number
+  dias: number
+  /** mas de 30 dias: la nota no rebaja el ITBIS (IndicadorNotaCredito 1) */
+  sinItbis: boolean
+  puedeAnular: boolean
+  puedeMonto: boolean
+}
+
+export interface ResultadoNota { numero: number; encf: string; monto: number; mensaje: string; dgii: EstadoEcf }
+
+export interface NotaImpresa {
+  origen: string
+  numero: number
+  encf: string
+  fecha: string
+  emisor: { rnc: string; razonSocial: string; direccion: string; telefono: string | null }
+  cliente: string | null
+  rnc: string | null
+  ncfModificado: string
+  fechaModificado: string
+  codigo: number
+  razon: string | null
+  desglose: { gravado: number; exento: number; itbis: number; propina: number; monto: number }
+  sinItbis: boolean
+  timbre: { codigoSeguridad: string | null; fechaHoraFirma: string | null; url: string | null }
+}
+
+export const prepararNota = (origen: string, factura: number) => pedir<PreparacionNota>(`/api/notas/${origen}/factura/${factura}`)
+export const crearNota = (origen: string, factura: number, d: { codigo: number; monto: number; motivo: string; responsable: string; clave: string }) =>
+  pedir<ResultadoNota>(`/api/notas/${origen}/factura/${factura}`, { method: 'POST', body: JSON.stringify(d) })
+export const notaImpresa = (origen: string, numero: number) => pedir<NotaImpresa>(`/api/notas/${origen}/${numero}`)
+export const reenviarNota = (origen: string, numero: number) => pedir<EstadoEcf>(`/api/notas/${origen}/${numero}/enviar`, { method: 'POST' })
