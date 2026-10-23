@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Espera from './Espera'
-import { dinero, fecha, hoyIso, listarFacturas, reenviarEcf, SesionVencida, type FacturaCerrada } from './api'
+import { dinero, fecha, hoyIso, listarFacturas, reenviarEcf, reenviarWalkIn, SesionVencida, type FacturaCerrada } from './api'
 
 /** Las facturas cerradas (check-out) con su estado en la DGII: reimprimir y reenviar las que no llegaron. */
 export default function Facturas({ alVencer }: { alVencer: () => void }) {
@@ -31,13 +31,13 @@ export default function Facturas({ alVencer }: { alVencer: () => void }) {
   }, [cargar, texto])
 
   async function reenviar(f: FacturaCerrada) {
-    if (!window.confirm(`¿Reenviar el ${f.encf} (factura #${f.numero}) a la DGII?`)) return
+    if (!window.confirm(`¿Reenviar el ${f.encf} (${f.walkIn ? "walk-in" : "factura"} #${f.numero}) a la DGII?`)) return
     setEnviando(f.numero)
     setAviso('')
     setError('')
     try {
-      const e = await reenviarEcf(f.numero)
-      setLista((l) => l?.map((x) => (x.numero === f.numero ? { ...x, dgii: e } : x)) ?? null)
+      const e = await (f.walkIn ? reenviarWalkIn(f.numero) : reenviarEcf(f.numero))
+      setLista((l) => l?.map((x) => (x.numero === f.numero && x.walkIn === f.walkIn ? { ...x, dgii: e } : x)) ?? null)
       setAviso(`${e.encf}: ${e.estado}${e.mensaje ? ` · ${e.mensaje}` : ''}`)
     } catch (e) {
       manejar(e)
@@ -69,10 +69,10 @@ export default function Facturas({ alVencer }: { alVencer: () => void }) {
           </thead>
           <tbody>
             {lista?.map((f) => (
-              <tr key={f.numero}>
+              <tr key={`${f.walkIn ? "w" : "h"}${f.numero}`}>
                 <td className="num">{f.numero}</td>
                 <td>{fecha(f.fecha, true)}</td>
-                <td className="num">{f.habitacion}</td>
+                <td className="num">{f.walkIn ? <span className="tenue">Walk-in</span> : f.habitacion}</td>
                 <td><strong>{f.cliente}</strong>{f.huesped && f.huesped !== f.cliente && <span className="tenue fila-sub">{f.huesped}</span>}</td>
                 <td>{f.encf || <span className="tenue">—</span>}</td>
                 <td className="num">{dinero(f.total)}</td>
@@ -83,7 +83,7 @@ export default function Facturas({ alVencer }: { alVencer: () => void }) {
                   {f.dgii?.mensaje && !f.dgii.aceptado && <span className="tenue fila-sub">{f.dgii.mensaje}</span>}
                 </td>
                 <td className="acciones-fila">
-                  {!f.transferida && f.encf && <button type="button" className="secundario chico" onClick={() => window.open(`/factura/${f.numero}`, '_blank')}>Imprimir</button>}
+                  {!f.transferida && f.encf && <button type="button" className="secundario chico" onClick={() => window.open(f.walkIn ? `/walkin/${f.numero}` : `/factura/${f.numero}`, '_blank')}>Imprimir</button>}
                   {f.dgii && !f.dgii.aceptado && f.dgii.estado !== 'Desconocido' && (
                     <button type="button" className="chico" disabled={enviando !== null} onClick={() => reenviar(f)}>Reenviar</button>
                   )}

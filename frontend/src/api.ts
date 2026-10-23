@@ -750,7 +750,56 @@ export interface FacturaCerrada {
   transferida: boolean
   /** null: sin e-NCF (transferida o vieja) */
   dgii: EstadoEcf | null
+  /** del walk-in (numera aparte; habitacion 0) */
+  walkIn: boolean
 }
 
 export const listarFacturas = (desde: string, hasta: string, texto: string) =>
   pedir<FacturaCerrada[]>(`/api/facturas?desde=${desde}&hasta=${hasta}&texto=${encodeURIComponent(texto)}`)
+
+// ---- etapa 6: walk-in ----
+
+export interface LineaWalkIn { servicio: number; descripcion: string; cantidad: number; precio: number }
+
+export interface PagoWalkIn { formaPago: number; descripcion: string; monto: number; montoUs?: number | null; noCheque?: string | null; banco?: string | null }
+
+export interface NuevoWalkIn {
+  nombre: string
+  cedula: string
+  rnc: string
+  telefono: string
+  direccion: string
+  tipo: number
+  conPropina: boolean
+  lineas: LineaWalkIn[]
+  pagos: PagoWalkIn[]
+}
+
+export interface RespuestaWalkIn {
+  walkIn: { numero: number; encf: string; subTotal: number; itbis: number; propina: number; total: number; recibido: number; devuelta: number; recibo: number }
+  dgii: EstadoEcf
+}
+
+export interface TicketWalkIn {
+  numero: number
+  encf: string | null
+  tipoNombre: string
+  fecha: string
+  vencimiento: string | null
+  emisor: { rnc: string; razonSocial: string; direccion: string; telefono: string | null }
+  nombre: string | null
+  identificacion: string | null
+  items: LineaImpresa[]
+  subTotal: number
+  itbis: number
+  propina: number
+  total: number
+  pagos: { formaPago: string; descripcion: string; monto: number }[]
+  concepto: string | null
+  usuario: string | null
+  timbre: { codigoSeguridad: string | null; fechaHoraFirma: string | null; url: string | null }
+}
+
+export const crearWalkIn = (w: NuevoWalkIn) => pedir<RespuestaWalkIn>('/api/walkins', { method: 'POST', body: JSON.stringify(w) })
+export const ticketWalkIn = (numero: number) => pedir<TicketWalkIn>(`/api/walkins/${numero}/ticket`)
+export const reenviarWalkIn = (numero: number) => pedir<EstadoEcf>(`/api/walkins/${numero}/enviar`, { method: 'POST' })

@@ -16,8 +16,9 @@ public sealed record PreparacionCheckout(int Habitacion, long Factura, string? C
 public sealed record ResultadoCheckout(long Numero, string? Encf, decimal Total, bool Transferida);
 
 /// <summary>Una factura cerrada en la lista, con su estado en la DGII (null si no lleva e-NCF).</summary>
+/// <param name="WalkIn">Del walk-in (HotelFacturaWalking, numera aparte; Habitacion 0).</param>
 public sealed record FacturaCerrada(long Numero, DateTime Fecha, int Habitacion, string? Cliente, string? Huesped, string? Encf,
-    decimal Total, bool Transferida, EstadoEcf? Dgii);
+    decimal Total, bool Transferida, EstadoEcf? Dgii, bool WalkIn = false);
 
 public sealed record LineaImpresa(DateTime? Fecha, string Descripcion, decimal Cantidad, decimal Precio, decimal Importe);
 
@@ -172,9 +173,12 @@ public sealed class RepositorioCheckout
                     return (new FacturaCerrada((long)x.Numero, x.Fecha, (int)x.Hab, x.Cliente, x.Huesped, x.Ncf, e.Total,
                         x.Transferida == true, null), e);
                 }).ToList();
+            // los walk-in del mismo rango (numeran aparte)
+            filas.AddRange(RepositorioWalkIn.Lista(cn, desde, hasta, t));
         }
         var estados = await ecf.Estados(filas.Where(x => !x.F.Transferida).Select(x => x.E).ToList());
-        return filas.Select(x => x.F with { Dgii = estados.TryGetValue(x.F.Numero, out var s) ? s : null }).ToList();
+        return filas.Select(x => x.F with { Dgii = x.F.Encf is { } e && estados.TryGetValue(e, out var s) ? s : null })
+            .OrderByDescending(x => x.Fecha.Date).ThenByDescending(x => x.WalkIn ? 0 : 1).ThenByDescending(x => x.Numero).ToList();
     }
 
     /// <summary>La factura cerrada para imprimir (carta, como Delphi) con el QR.</summary>

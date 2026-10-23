@@ -394,7 +394,8 @@ button.chico { padding: 0.15em 0.6em; font-size: 0.85em; }
   .no-imprimir { display: none !important; }
   .factura-hoja { padding: 0; max-width: none; }
   body { background: #fff; }
-  @page { size: letter; margin: 0.5in; }
+  .factura-hoja { page: carta; }
+  @page carta { size: letter; margin: 0.5in; }
 }
 
 /* espera mientras se habla con la DGII */
@@ -405,3 +406,27 @@ button.chico { padding: 0.15em 0.6em; font-size: 0.85em; }
 @keyframes espera-gira { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .espera-rueda { animation-duration: 3s; } }
 .acciones-fila { white-space: nowrap; display: flex; gap: 6px; }
+
+/* walk-in */
+.walkin { display: grid; gap: 4px; }
+.walkin legend { font-weight: 600; padding: 0 6px; }
+.walkin .cuatro { display: grid; grid-template-columns: 1.2fr 1fr 1.2fr auto; gap: 10px; align-items: end; }
+.botones.izquierda { justify-content: flex-start; }
+.devuelta { font-size: 1.4em; }
+@media (max-width: 760px) { .walkin .cuatro { grid-template-columns: 1fr; } }
+
+/* ticket POS 80 mm del walk-in */
+.ticket { width: 72mm; margin: 0 auto; padding: 4mm 0; background: #fff; color: #000; font: 12px/1.3 "Courier New", monospace; }
+.ticket p { margin: 1px 0; }
+.ticket hr { border: 0; border-top: 1px dashed #000; margin: 6px 0; }
+.ticket-centro { text-align: center; }
+.ticket-tabla { width: 100%; border-collapse: collapse; }
+.ticket-tabla td { padding: 1px 0; vertical-align: top; }
+.ticket-tabla .num { text-align: right; white-space: nowrap; padding-left: 6px; }
+.ticket-sub { display: block; font-size: 11px; }
+.ticket-total td { font-weight: 700; font-size: 14px; border-top: 1px solid #000; padding-top: 3px; }
+@media print {
+  .ticket { width: auto; padding: 0; }
+  .ticket { page: ticket; }
+  @page ticket { size: 80mm auto; margin: 3mm; }
+}

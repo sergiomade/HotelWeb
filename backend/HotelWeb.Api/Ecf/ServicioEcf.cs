@@ -15,6 +15,9 @@ public sealed record EstadoEcf(string Encf, long Factura, string Estado, string?
 /// <summary>Los datos del QR y de la representacion impresa (DocumentosXml, el registro del e-CF completo).</summary>
 public sealed record TimbreEcf(string? CodigoSeguridad, string? FechaHoraFirma, string? Url);
 
+/// <summary>De donde sale la factura: el check-out (HotelTmpFactura) o el walk-in (HotelFacturaWalking). Numeran aparte.</summary>
+public enum OrigenFactura { Hospedaje, WalkIn }
+
 /// <summary>
 /// Arma el e-CF de una factura cerrada (HotelTmpFactura), lo guarda en FacturaXml (sp_GuardarFacturaXml) y lo envia por
 /// la API WebEncf (Parametro.UrlApiEcf; la misma que usa Delphi con EcfPorHttp): ECF con EnviarDesdeHotel; la E32 de
@@ -63,6 +66,37 @@ public sealed class ServicioEcf
     /// La factura cerrada con lo que lleva el e-CF. Credito (TipoPago 2) si algun pago de la estadia fue a credito
     /// (Monedas_id 6), con los recibos de la reserva + habitacion + clave, como CrearFacturaXml.
     /// </summary>
+    internal static FacturaEcf? Leer(IDbConnection cn, IDbTransaction? tx, OrigenFactura origen, long numero, out bool transferida)
+    {
+        if (origen == OrigenFactura.Hospedaje) return Leer(cn, tx, numero, out transferida);
+        transferida = false;
+        return LeerWalkIn(cn, tx, numero);
+    }
+
+    /// <summary>
+    /// El walk-in como CrearFacturaXmlWalking: si el RNC esta vacio o en ceros, la cedula; credito si algun pago de su
+    /// recibo fue a credito (Monedas_id 6).
+    /// </summary>
+    internal static FacturaEcf? LeerWalkIn(IDbConnection cn, IDbTransaction? tx, long numero)
+    {
+        var f = cn.QueryFirstOrDefault<FilaFactura>("""
+            SELECT w.FacturaWalking_id AS Factura_id, RTRIM(w.NCF) AS NCF, w.Fecha,
+                   CASE WHEN REPLACE(LTRIM(RTRIM(ISNULL(w.RNC, ''))), '0', '') = '' THEN RTRIM(w.Cedula) ELSE RTRIM(w.RNC) END AS RNC,
+                   RTRIM(w.Nombre) AS NombreCliente, w.SubTotal, w.Itbis, w.Propina, CAST(0 AS bit) AS Transferida,
+                   CAST(CASE WHEN EXISTS (SELECT 1 FROM HotelReciboIngreso r JOIN HotelReciboDetalle d ON d.NumeroRecibo = r.NumeroRecibo
+                                          WHERE r.FacturaWalking_id = w.FacturaWalking_id AND d.Monedas_id = 6) THEN 1 ELSE 0 END AS bit) AS Credito
+            FROM HotelFacturaWalking w WHERE w.FacturaWalking_id = @numero
+            """, new { numero }, tx);
+        if (f is null) return null;
+        var lineas = cn.Query<(string Descripcion, int? Cantidad, decimal? Precio, decimal? Importe, bool? Activo)>("""
+            SELECT RTRIM(Descripcion), Cantidad, Precio, Importe, Activo FROM HotelFacturaWalkingDetalle
+            WHERE FacturaWalking_id = @numero ORDER BY Secuencia
+            """, new { numero }, tx);
+        return new FacturaEcf(f.NCF ?? "", (long)f.Factura_id, f.Fecha.Date, f.RNC, f.NombreCliente, f.SubTotal ?? 0, f.Itbis ?? 0,
+            f.Propina ?? 0, f.Credito,
+            EcfHotel.Items(lineas.Select(l => (l.Descripcion ?? "", (decimal)(l.Cantidad ?? 0), l.Precio ?? 0, l.Importe ?? 0, l.Activo == true))));
+    }
+
     internal static FacturaEcf? Leer(IDbConnection cn, IDbTransaction? tx, long numero, out bool transferida)
     {
         var f = cn.QueryFirstOrDefault<FilaFactura>("""
@@ -112,14 +146,14 @@ public sealed class ServicioEcf
     }
 
     /// <summary>Arma, guarda y envia el e-CF de la factura cerrada. No lanza por la DGII: devuelve el estado.</summary>
-    public async Task<EstadoEcf> Enviar(long numero)
+    public async Task<EstadoEcf> Enviar(long numero, OrigenFactura origen = OrigenFactura.Hospedaje)
     {
         FacturaEcf f;
         string xml;
         FilaParametro p;
         using (var cn = _conexiones.Hotel())
         {
-            f = Leer(cn, null, numero, out var transferida) ?? throw new ErrorCatalogo($"No existe la factura {numero}.");
+            f = Leer(cn, null, origen, numero, out var transferida) ?? throw new ErrorCatalogo($"No existe la factura {numero}.");
             if (transferida) throw new ErrorCatalogo("La factura es de una cuenta transferida: no va a la DGII.");
             p = Parametro(cn);
             xml = EcfHotel.Ecf(f, Emisor(cn), FechaVencimiento(cn, f.Encf), DateTime.Now);
@@ -153,13 +187,13 @@ public sealed class ServicioEcf
     }
 
     /// <summary>El estado en la DGII de un e-CF ya enviado (sin volver a enviarlo).</summary>
-    public async Task<EstadoEcf> Consultar(long numero)
+    public async Task<EstadoEcf> Consultar(long numero, OrigenFactura origen = OrigenFactura.Hospedaje)
     {
         FacturaEcf f;
         FilaParametro p;
         using (var cn = _conexiones.Hotel())
         {
-            f = Leer(cn, null, numero, out _) ?? throw new ErrorCatalogo($"No existe la factura {numero}.");
+            f = Leer(cn, null, origen, numero, out _) ?? throw new ErrorCatalogo($"No existe la factura {numero}.");
             p = Parametro(cn);
         }
         if (string.IsNullOrWhiteSpace(p.UrlApiEcf) || !f.Encf.StartsWith('E')) return new EstadoEcf(f.Encf, numero, "Sin enviar", null, false);
@@ -213,9 +247,9 @@ public sealed class ServicioEcf
     /// El estado en la DGII de varias facturas cerradas (la lista de facturas): DocumentosXml se pide UNA vez por tipo
     /// para todo el rango, y los ECF con trackId se consultan de a 4. Las que no tienen e-NCF no van en el resultado.
     /// </summary>
-    public async Task<Dictionary<long, EstadoEcf>> Estados(IReadOnlyList<FacturaEcf> facturas)
+    public async Task<Dictionary<string, EstadoEcf>> Estados(IReadOnlyList<FacturaEcf> facturas)
     {
-        var r = new Dictionary<long, EstadoEcf>();
+        var r = new Dictionary<string, EstadoEcf>();
         var conEcf = facturas.Where(f => f.Encf.Length == 13 && f.Encf[0] == 'E').ToList();
         if (conEcf.Count == 0) return r;
         string? url;
@@ -228,7 +262,7 @@ public sealed class ServicioEcf
         }
         if (string.IsNullOrWhiteSpace(url))
         {
-            foreach (var f in conEcf) r[f.Factura] = new EstadoEcf(f.Encf, f.Factura, "Sin enviar", "Falta Parametro.UrlApiEcf.", false);
+            foreach (var f in conEcf) r[f.Encf] = new EstadoEcf(f.Encf, f.Factura, "Sin enviar", "Falta Parametro.UrlApiEcf.", false);
             return r;
         }
         var api = Cliente(new FilaParametro { UrlApiEcf = url, ClaveApiEcf = clave });
@@ -257,11 +291,11 @@ public sealed class ServicioEcf
                 }
                 finally { turnos.Release(); }
             });
-            foreach (var e in await Task.WhenAll(tareas)) r[e.Factura] = e;
+            foreach (var e in await Task.WhenAll(tareas)) r[e.Encf] = e;
         }
         catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
         {
-            foreach (var f in conEcf) r[f.Factura] = new EstadoEcf(f.Encf, f.Factura, "Desconocido", $"No hubo conexion con la API: {e.Message}", false);
+            foreach (var f in conEcf) r[f.Encf] = new EstadoEcf(f.Encf, f.Factura, "Desconocido", $"No hubo conexion con la API: {e.Message}", false);
         }
         return r;
     }

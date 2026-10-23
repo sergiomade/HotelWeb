@@ -203,3 +203,16 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
 - Etapa 5, parte 2 HECHA (2026-10-23): Recepcion > Facturas (`GET /api/facturas?desde&hasta&texto`): facturas cerradas
   con su estado en la DGII (DocumentosXml una vez por tipo para el rango; ECF con trackId de a 4), imprimir y reenviar.
   ETAPA 5 COMPLETA. Siguiente: etapa 6 (walk-in).
+
+## Etapa 6 (walk-in): decisiones del usuario (2026-10-23)
+- Como UfrmWalking de Delphi: nombre, cedula/RNC, comprobante E31/E32/E44/E45, servicios, pagos; ITBIS 18 % salvo E44;
+  propina solo si "con propina". Todo en una transaccion (numero, e-NCF, encabezado, lineas, recibo con
+  FacturaWalking_id) y despues el envio con el mismo armador del e-CF.
+- Impresion: ticket POS 80 mm con el QR, como Delphi.
+- Devuelta: se graba LO APLICADO (Delphi graba lo entregado: walk-in 314, 3,500 por 3,226.55, y STP_CuadreDeCaja suma
+  HotelReciboDetalle.Monto: cuenta la devuelta como ingreso).
+- Menu propio "Walk-in" en la barra.
+- Etapa 6 HECHA (2026-10-23): menu Walk-in (`POST /api/walkins`, ticket `/walkin/{n}`, `/api/walkins/{n}/dgii|enviar`).
+  Lo aplicado en el recibo y la devuelta en su concepto ("recibido X, devuelta Y"); la devuelta solo sale del efectivo.
+  Los walk-in salen en Recepcion > Facturas (estado DGII por e-NCF). Probado en testecf: E320000006071 (walk-in 318,
+  efectivo con devuelta) y E310000000238 (319, tarjeta, con propina) ACEPTADAS; se dejan en Hotel_new.
