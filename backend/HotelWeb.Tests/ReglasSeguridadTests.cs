@@ -37,6 +37,18 @@ public class ReglasSeguridadTests
     }
 
     [Fact]
+    public void Cerrar_la_caja_lo_hereda_quien_veia_la_pestana_caja()
+    {
+        Assert.Equal(PermisosHotel.PorCodigo(PermisosHotel.CerrarCajaHotel.Hereda!.Value)!.Clave, "recepcion.caja");
+        Assert.Equal(PermisosHotel.PorCodigo(PermisosHotel.CerrarCajaCafeteria.Hereda!.Value)!.Clave, "cafeteria.caja");
+        Assert.Contains(PermisosHotel.CerrarCajaHotel, PermisosHotel.DeRecepcion);
+        Assert.Contains(PermisosHotel.CerrarCajaCafeteria, PermisosHotel.DeRecepcion);
+        // la pestana va antes que la accion: al sincronizar, la pestana se hereda primero
+        var orden = PermisosHotel.Todos.ToList();
+        Assert.True(orden.FindIndex(p => p.Clave == "recepcion.caja") < orden.IndexOf(PermisosHotel.CerrarCajaHotel));
+    }
+
+    [Fact]
     public void Recepcion_trae_sus_pestanas_pero_no_las_de_catalogos()
     {
         var claves = PermisosHotel.DeRecepcion.Select(p => p.Clave).ToList();

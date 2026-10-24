@@ -129,6 +129,15 @@ public class PermisosTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public void Sin_activar_la_seguridad_todos_cierran_su_caja_como_antes()
+    {
+        var p = (PermisosWeb)_f.Services.GetService(typeof(PermisosWeb))!;
+        Assert.True(p.CierraCaja(99, hotel: true));
+        Assert.True(p.CierraCaja(99, hotel: false));
+        Assert.False(p.EditaClientes(99));
+    }
+
+    [Fact]
     public async Task Sin_sesion_tampoco()
     {
         var r = await _f.CreateClient().PutAsJsonAsync("/api/catalogos/precios/1/A", new { conImpuestos = 3500m, personaAdicional = 0m });

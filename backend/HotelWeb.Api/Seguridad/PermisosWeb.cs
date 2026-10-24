@@ -96,6 +96,7 @@ public sealed class PermisosWeb
     private HashSet<int> SinActivar(int usuarioId)
     {
         var p = PermisosHotel.Todos.Where(x => x.Tipo != TipoPermiso.Accion).Select(x => x.Codigo).ToHashSet();
+        p.UnionWith(PermisosHotel.DeTodosSinActivar.Select(x => x.Codigo));
         if (_editanCatalogos.Contains(usuarioId))
         {
             p.UnionWith(PermisosHotel.EdicionCatalogos.Select(x => x.Codigo));
@@ -137,6 +138,10 @@ public sealed class PermisosWeb
 
     /// <summary>Anular un cargo de la cuenta de una habitacion.</summary>
     public bool AnulaCargos(int usuarioId) => Tiene(usuarioId, PermisosHotel.AnularCargos);
+
+    /// <summary>Cerrar el turno de caja del hotel o de la cafeteria (Posteado = 1).</summary>
+    public bool CierraCaja(int usuarioId, bool hotel) =>
+        Tiene(usuarioId, hotel ? PermisosHotel.CerrarCajaHotel : PermisosHotel.CerrarCajaCafeteria);
 
     public bool AdministraSeguridad(int usuarioId) => Tiene(usuarioId, PermisosHotel.AdministrarSeguridad);
 

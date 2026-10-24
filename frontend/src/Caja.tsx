@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import {
-  cerrarCaja, cierresCaja, cuadreCaja, dinero, fecha, SesionVencida,
+  cerrarCaja, cierresCaja, cuadreCaja, dinero, fecha, puede, SesionVencida,
   type AmbitoCaja, type CierreResumen, type CuadreCaja, type ResumenCaja,
 } from './api'
 
@@ -115,6 +115,12 @@ export default function Caja({ ambito, alVencer }: { ambito: AmbitoCaja; alVence
           )}
         </div>
 
+        {!puede(hotel ? 'cerrarCajaHotel' : 'cerrarCajaCafeteria') ? (
+          <div className="grupo-cargo caja-cierre">
+            <h3>Cerrar el turno</h3>
+            <p className="tenue">Su usuario puede ver el cuadre, pero no cerrar el turno. Pídale el cierre a quien tenga ese permiso.</p>
+          </div>
+        ) : (
         <form className="grupo-cargo caja-cierre" onSubmit={cerrar}>
           <h3>Cerrar el turno</h3>
           <label>Efectivo contado (RD$)
@@ -137,6 +143,7 @@ export default function Caja({ ambito, alVencer }: { ambito: AmbitoCaja; alVence
           <div className="botones"><button type="submit" disabled={!!motivo || enviando}>Cerrar el turno</button></div>
           <p className="tenue">Cierra solo lo suyo. {hotel ? 'Los recibos y adelantos quedan posteados, como en el cuadre de Delphi.' : ''}</p>
         </form>
+        )}
       </div>
 
       {cierres.length > 0 && (

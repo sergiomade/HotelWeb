@@ -451,6 +451,9 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
     Editor de grupos por area (area, sus pestanas y sus acciones). Probado en una copia: migracion y un grupo
     "CLIENTES RECEPCION" (Catalogos + pestana Clientes + crear clientes: precios y habitaciones dan 403).
     Las pruebas de la API usan una base de seguridad que no existe (antes escribian en la de desarrollo).
+  - 2026-10-24, pedido del usuario: el cierre de caja se asigna aparte. Acciones 4161 (caja del hotel, area Recepcion)
+    y 4162 (cafeteria): la pestana Caja deja ver el cuadre; cerrar el turno pide la accion (CajaController 403). Las
+    heredan los grupos que veian la pestana Caja; sin activar, todos cierran como antes; RECEPCION las trae al activar.
   - 2026-10-24: backend\hotelpruebas.ps1 arranca la API contra HotelPruebas (nube) leyendo la conexion de
     conexiones.ini al arrancar (la clave no queda en el proyecto); seguridad = hSeguridad local, o -SeguridadNube para
     db_aa9d01_hseguridad (usuarios reales). appsettings.Development.json queda con Hotel_new de respaldo.

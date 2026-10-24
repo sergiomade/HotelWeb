@@ -16,11 +16,13 @@ public sealed record SolicitudCierre(decimal Efectivo, decimal Dolares, string? 
 public sealed class CajaController : ControllerBase
 {
     private readonly RepositorioCaja _caja;
+    private readonly PermisosWeb _permisos;
     private readonly ILogger<CajaController> _log;
 
-    public CajaController(RepositorioCaja caja, ILogger<CajaController> log)
+    public CajaController(RepositorioCaja caja, PermisosWeb permisos, ILogger<CajaController> log)
     {
         _caja = caja;
+        _permisos = permisos;
         _log = log;
     }
 
@@ -45,6 +47,9 @@ public sealed class CajaController : ControllerBase
     public ActionResult<CierreResumen> Cerrar(string ambito, SolicitudCierre s)
     {
         if (AmbitoDe(ambito) is not { } a) return BadRequest("Caja no valida: hotel o cafeteria.");
+        // ver el cuadre es la pestana Caja; cerrar el turno es un permiso aparte (Seguridad)
+        if (!_permisos.CierraCaja(Tokens.IdDe(User), a == AmbitoCaja.Hotel))
+            return StatusCode(403, "Su usuario no puede cerrar el turno de esta caja.");
         try
         {
             var c = _caja.Cerrar(a, Login, s.Efectivo, s.Dolares, s.Comentario, (s.Movimientos, s.Ingresos),

@@ -52,6 +52,10 @@ public static class PermisosHotel
     public static readonly PermisoHotel EditarPrecios = new(4153, "editarPrecios", "Cambiar precios", TipoPermiso.Accion, "", "catalogos", EditarCatalogosViejo);
     public static readonly PermisoHotel EditarServicios = new(4154, "editarServicios", "Crear y modificar servicios", TipoPermiso.Accion, "", "catalogos", EditarCatalogosViejo);
     public static readonly PermisoHotel EditarClientes = new(4155, "editarClientes", "Crear y modificar clientes", TipoPermiso.Accion, "", "catalogos", EditarCatalogosViejo);
+    // el cierre de caja: ver el cuadre es la pestana Caja; cerrar el turno (Posteado = 1) es esta accion. Al aparecer
+    // en una base ya activada la reciben los grupos que veian la pestana Caja (antes, ver la caja era poder cerrarla).
+    public static readonly PermisoHotel CerrarCajaHotel = new(4161, "cerrarCajaHotel", "Cerrar el turno de caja", TipoPermiso.Accion, "Cierre de caja del hotel (recibos y adelantos)", "recepcion", 4104);
+    public static readonly PermisoHotel CerrarCajaCafeteria = new(4162, "cerrarCajaCafeteria", "Cerrar el turno de caja", TipoPermiso.Accion, "Cierre de caja de la cafetería", "cafeteria", 4113);
     public static readonly PermisoHotel ComprobantesEspeciales = new(4014, "comprobantesEspeciales", "Comprobantes especiales", TipoPermiso.Accion, "Emitir gastos menores (E43) y compras a informales (E41), y cambiar las secuencias e-CF");
     public static readonly PermisoHotel AdministrarSeguridad = new(4020, "seguridad", "Administrar seguridad", TipoPermiso.Accion, "Usuarios, grupos y permisos de la web (el menú Seguridad)");
 
@@ -89,14 +93,18 @@ public static class PermisosHotel
 
     public static readonly IReadOnlyList<PermisoHotel> Todos = Areas
         .Concat(Opciones)
-        .Concat(new[] { AnularCargos, AnularRecibos, AnularAdelantos, EditarHabitaciones, EditarTipos, EditarPrecios, EditarServicios, EditarClientes, ComprobantesEspeciales, AdministrarSeguridad })
+        .Concat(new[] { AnularCargos, AnularRecibos, AnularAdelantos, CerrarCajaHotel, CerrarCajaCafeteria, EditarHabitaciones, EditarTipos, EditarPrecios, EditarServicios, EditarClientes, ComprobantesEspeciales, AdministrarSeguridad })
         .ToList();
+
+    /// <summary>Lo que todos podian hacer antes de la seguridad por grupos (sin activar, siguen pudiendo).</summary>
+    public static readonly IReadOnlyList<PermisoHotel> DeTodosSinActivar = new[] { CerrarCajaHotel, CerrarCajaCafeteria };
 
     /// <summary>Las de los catalogos (la vieja "Editar catalogos").</summary>
     public static readonly IReadOnlyList<PermisoHotel> EdicionCatalogos = new[] { EditarHabitaciones, EditarTipos, EditarPrecios, EditarServicios, EditarClientes };
 
-    /// <summary>Las areas de trabajo del grupo RECEPCION que se crea al activar, con todas sus pestanas.</summary>
-    public static readonly IReadOnlyList<PermisoHotel> DeRecepcion = ConSusOpciones(Hospedaje, Reservas, Recepcion, WalkIn, Cafeteria);
+    /// <summary>Las areas de trabajo del grupo RECEPCION que se crea al activar, con todas sus pestanas y el cierre de caja.</summary>
+    public static readonly IReadOnlyList<PermisoHotel> DeRecepcion =
+        ConSusOpciones(Hospedaje, Reservas, Recepcion, WalkIn, Cafeteria).Concat(new[] { CerrarCajaHotel, CerrarCajaCafeteria }).ToList();
 
     /// <summary>Las areas dadas y todas sus pestanas.</summary>
     public static IReadOnlyList<PermisoHotel> ConSusOpciones(params PermisoHotel[] areas) =>
