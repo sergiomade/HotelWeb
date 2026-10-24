@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import FotoTipo from './FotoTipo'
+import { useFotosTipos } from './useFotosTipos'
 import { dinero, fecha, reservaImpresa, sesionGuardada, SesionVencida, type ReservaImpresa as Datos } from './api'
 
 /**
@@ -8,6 +10,7 @@ import { dinero, fecha, reservaImpresa, sesionGuardada, SesionVencida, type Rese
 export default function ReservaImpresa({ id }: { id: number }) {
   const [d, setD] = useState<Datos | null>(null)
   const [error, setError] = useState('')
+  const fotos = useFotosTipos()
 
   useEffect(() => {
     if (!sesionGuardada()) {
@@ -77,6 +80,17 @@ export default function ReservaImpresa({ id }: { id: number }) {
           ))}
         </tbody>
       </table>
+
+      {fotos.length > 0 && r.lineas.some((l) => fotos.some((f) => f.tipo === l.tipo)) && (
+        <div className="reserva-fotos">
+          {[...new Set(r.lineas.map((l) => l.tipo))].map((t) => (
+            <figure key={t}>
+              <FotoTipo tipo={t} fotos={fotos} className="foto-tipo impresa" />
+              {fotos.some((f) => f.tipo === t) && <figcaption>{r.lineas.find((l) => l.tipo === t)?.tipoNombre} (foto ilustrativa)</figcaption>}
+            </figure>
+          ))}
+        </div>
+      )}
 
       <div className="factura-pie">
         <div className="factura-pagos">

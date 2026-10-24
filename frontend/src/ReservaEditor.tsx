@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react'
 import Fondo from './Fondo'
+import FotoTipo from './FotoTipo'
+import { useFotosTipos } from './useFotosTipos'
 import {
   anularAdelanto, buscarClientes, cancelarReserva, crearReserva, dinero, disponibilidad, fecha, FACTOR_IMPUESTOS, hoyIso,
   modificarReserva, obtenerCliente, obtenerPrecios, obtenerReserva, opcionesReserva, PideConfirmar, registrarAdelanto, SesionVencida,
@@ -19,6 +21,7 @@ export default function ReservaEditor({ id, alCerrar, alVencer }: {
   alVencer: () => void
 }) {
   const [reserva, setReserva] = useState<Reserva | null>(null)
+  const fotos = useFotosTipos()
   const [d, setD] = useState<DatosReserva>(NUEVA)
   const [precios, setPrecios] = useState<PantallaPrecios | null>(null)
   const [opciones, setOpciones] = useState<OpcionesReserva | null>(null)
@@ -236,9 +239,12 @@ export default function ReservaEditor({ id, alCerrar, alVencer }: {
                     {d.lineas.map((l, i) => {
                       return (
                         <tr key={i}>
-                          <td><select value={l.tipo} onChange={(x) => cambiarLinea(i, { tipo: Number(x.target.value) })}>
-                            {tipos.map((t) => <option key={t.id} value={t.id}>{t.descripcion}</option>)}
-                          </select></td>
+                          <td className="con-foto">
+                            <FotoTipo tipo={l.tipo} fotos={fotos} className="foto-tipo mini" />
+                            <select value={l.tipo} onChange={(x) => cambiarLinea(i, { tipo: Number(x.target.value) })}>
+                              {tipos.map((t) => <option key={t.id} value={t.id}>{t.descripcion}</option>)}
+                            </select>
+                          </td>
                           <td><select value={l.categoria} onChange={(x) => cambiarLinea(i, { categoria: x.target.value })}>
                             {categorias.map((c) => <option key={c.id} value={c.id}>{c.id}</option>)}
                           </select></td>

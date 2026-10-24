@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import Fondo from './Fondo'
+import FotoTipo from './FotoTipo'
+import { useFotosTipos } from './useFotosTipos'
 import {
   buscarClientes, dinero, FACTOR_IMPUESTOS, fecha, hacerCheckIn, llegadasHoy, obtenerPrecios, prepararCheckIn, SesionVencida,
   type Asignacion, type ClienteResumen, type LlegadaHoy, type LugarCheckIn, type PantallaPrecios, type PreparacionCheckIn,
@@ -68,6 +70,7 @@ export function Asignar({ reserva, alCerrar, alVencer }: {
   alVencer: () => void
 }) {
   const [p, setP] = useState<PreparacionCheckIn | null>(null)
+  const fotos = useFotosTipos()
   const [elegidas, setElegidas] = useState<Record<string, number>>({})
   // categoria y tarifa (sin impuestos) de cada lugar; la tarifa null = ese tipo no tiene precio en esa categoria
   // respetar: el hotel no cumplio con el tipo reservado y le mantiene al cliente el precio acordado
@@ -192,7 +195,10 @@ export function Asignar({ reserva, alCerrar, alVencer }: {
                   const pr = precio[clave] ?? { categoria: l.categoria || 'A', tarifa: l.tarifa }
                   return (
                     <tr key={clave}>
-                      <td>{l.tipoNombre}{l.categoria ? ` (${l.categoria})` : ''}<span className="tenue fila-sub">{dinero(l.tarifa)} reservada</span></td>
+                      <td className="con-foto">
+                        <FotoTipo tipo={libre?.tipo ?? l.tipo} fotos={fotos} className="foto-tipo mini" />
+                        <span>{l.tipoNombre}{l.categoria ? ` (${l.categoria})` : ''}<span className="tenue fila-sub">{dinero(l.tarifa)} reservada</span></span>
+                      </td>
                       <td>{l.adultos} adultos{l.ninos ? `, ${l.ninos} niños` : ''}{l.bebes ? `, ${l.bebes} bebés` : ''}{l.credito ? ' · crédito' : ''}</td>
                       <td>
                         <select value={elegida ?? ''} onChange={(e) => elegir(l, Number(e.target.value))}>

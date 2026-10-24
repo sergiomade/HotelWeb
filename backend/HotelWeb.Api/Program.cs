@@ -18,6 +18,7 @@ builder.Services.AddSingleton<HotelWeb.Api.Rack.RepositorioRack>();
 builder.Services.AddSingleton<HotelWeb.Api.Catalogos.RepositorioPrecios>();
 builder.Services.AddSingleton<HotelWeb.Api.Catalogos.RepositorioHabitaciones>();
 builder.Services.AddSingleton<HotelWeb.Api.Catalogos.RepositorioTipos>();
+builder.Services.AddSingleton<HotelWeb.Api.Catalogos.RepositorioFotosTipo>();
 builder.Services.AddSingleton<HotelWeb.Api.Catalogos.RepositorioServicios>();
 builder.Services.AddSingleton<HotelWeb.Api.Catalogos.RepositorioClientes>();
 builder.Services.AddSingleton<HotelWeb.Api.Reservas.RepositorioReservas>();

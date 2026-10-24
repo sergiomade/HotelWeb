@@ -399,3 +399,9 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
 18. Impresos (2026-10-23): recibo de ingreso /recibo/{numero} en media carta (como ppReport3 de UFrmMntRecibos, con la
     suma en letras de MontoEnLetras; sale solo al grabar el recibo) y confirmacion de reserva /reserva/{id} (como
     ppReport2 de UFrmMntReservacion, mas los adelantos y el pendiente o saldo a favor).
+19. Tablero (2026-10-23): la pestana Sistema paso a ser el tablero del dia y es la pagina de entrada.
+20. Fotos de los tipos de habitacion (2026-10-23, MIG_27 = tabla HotelTipoFoto, aplicada en HotelPruebas): una por
+    tipo, dentro de la base (no en el sitio: se perderian al actualizar). Se ponen en Catalogos > Tipos (el navegador
+    las achica a 1280 px); se ven en el check-in, el editor de reservas, la confirmacion impresa y la cuenta. La foto se
+    sirve sin sesion (la etiqueta img no manda el token). En HotelPruebas quedaron fotos ilustrativas (no exactas) de
+    C:\NewProyectHotel\Images en los tipos 1-7; BOOKING, CREDITO, WARTSILA y los "0" sin foto.

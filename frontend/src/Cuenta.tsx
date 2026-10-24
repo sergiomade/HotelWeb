@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import Fondo from './Fondo'
+import FotoTipo from './FotoTipo'
+import { useFotosTipos } from './useFotosTipos'
 import RecibosCuenta from './RecibosCuenta'
 import Espera from './Espera'
 import {
@@ -18,6 +20,7 @@ export default function Cuenta({ habitacion: h, alCerrar, alVencer, alCambiar }:
   alCambiar?: () => void
 }) {
   const [cuenta, setCuenta] = useState<CuentaHabitacion | null>(null)
+  const fotos = useFotosTipos()
   const [anula, setAnula] = useState(false)
   const [anulaRecibos, setAnulaRecibos] = useState(false)
   const [abierto, setAbierto] = useState<'cargo' | 'pago' | 'salida' | 'cambio' | 'checkout' | null>(null)
@@ -70,7 +73,8 @@ export default function Cuenta({ habitacion: h, alCerrar, alVencer, alCambiar }:
     <Fondo alCerrar={alCerrar}>
       <aside className="panel" role="dialog" aria-modal="true" aria-label={`Habitacion ${h.numero}`}>
         <header>
-          <div>
+          <FotoTipo nombre={h.tipo} fotos={fotos} className="foto-tipo cabeza" />
+          <div className="crece">
             <h2>Habitación {h.numero}</h2>
             <p className="tenue">{h.tipo} · {h.estado}{h.comentario ? ` · ${h.comentario}` : ''}</p>
           </div>

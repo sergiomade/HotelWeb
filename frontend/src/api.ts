@@ -267,6 +267,38 @@ export const modificarTipo = (id: number, d: DatosTipo) =>
 export const crearTipo = (d: DatosTipo) =>
   pedir<TipoHabitacion>('/api/catalogos/tipos', { method: 'POST', body: JSON.stringify(d) })
 
+// ---- fotos de los tipos de habitacion (MIG_27) ----
+
+export interface FotoTipo { tipo: number; descripcion: string; version: number }
+
+// una sola consulta para toda la pagina; se vuelve a pedir al cambiar una foto
+let fotosPendientes: Promise<FotoTipo[]> | null = null
+export function fotosTipos(nuevas = false): Promise<FotoTipo[]> {
+  if (nuevas || !fotosPendientes)
+    fotosPendientes = pedir<FotoTipo[]>('/api/catalogos/tipos/fotos').catch((e) => {
+      fotosPendientes = null
+      throw e
+    })
+  return fotosPendientes
+}
+export const urlFotoTipo = (f: FotoTipo) => `/api/catalogos/tipos/${f.tipo}/foto?v=${f.version}`
+export const guardarFotoTipo = (tipo: number, base64: string) =>
+  pedirOpcional<null>(`/api/catalogos/tipos/${tipo}/foto`, { method: 'PUT', body: JSON.stringify({ base64 }) })
+export const quitarFotoTipo = (tipo: number) => pedirOpcional<null>(`/api/catalogos/tipos/${tipo}/foto`, { method: 'DELETE' })
+
+/** Achica la foto en el navegador (lado mayor 1280 px, JPG) y la devuelve en base64, lista para subir. */
+export async function achicarFoto(archivo: File, lado = 1280): Promise<string> {
+  const img = await createImageBitmap(archivo)
+  const escala = Math.min(1, lado / Math.max(img.width, img.height))
+  const lienzo = document.createElement('canvas')
+  lienzo.width = Math.round(img.width * escala)
+  lienzo.height = Math.round(img.height * escala)
+  lienzo.getContext('2d')!.drawImage(img, 0, 0, lienzo.width, lienzo.height)
+  img.close()
+  const url = lienzo.toDataURL('image/jpeg', 0.82)
+  return url.slice(url.indexOf(',') + 1)
+}
+
 // ---- catalogos: servicios ----
 
 export interface Servicio {

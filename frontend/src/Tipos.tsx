@@ -1,6 +1,11 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import Fondo from './Fondo'
-import { crearTipo, modificarTipo, obtenerTipos, SesionVencida, type DatosTipo, type TipoHabitacion } from './api'
+import FotoTipo from './FotoTipo'
+import { useFotosTipos } from './useFotosTipos'
+import {
+  achicarFoto, crearTipo, guardarFotoTipo, modificarTipo, obtenerTipos, quitarFotoTipo, SesionVencida, type DatosTipo,
+  type TipoHabitacion,
+} from './api'
 
 type Edicion = { nuevo: true } | { nuevo: false; t: TipoHabitacion }
 
@@ -11,6 +16,11 @@ export default function Tipos({ alVencer }: { alVencer: () => void }) {
   const [error, setError] = useState('')
   const [editando, setEditando] = useState<Edicion | null>(null)
   const [aviso, setAviso] = useState('')
+  const [versionFotos, setVersionFotos] = useState(0)
+  const fotos = useFotosTipos(versionFotos)
+  const [subiendo, setSubiendo] = useState<number | null>(null)
+  const archivo = useRef<HTMLInputElement>(null)
+  const paraTipo = useRef<TipoHabitacion | null>(null)
 
   const manejar = useCallback(
     (e: unknown) => (e instanceof SesionVencida ? alVencer() : setError(e instanceof Error ? e.message : String(e))),
@@ -35,6 +45,39 @@ export default function Tipos({ alVencer }: { alVencer: () => void }) {
     setAviso(`${nuevo ? 'Creado' : 'Guardado'} el tipo ${t.descripcion}.${nuevo ? ' Ponga sus precios en la pestaña Precios.' : ''}`)
   }
 
+  function elegirFoto(t: TipoHabitacion) {
+    paraTipo.current = t
+    archivo.current?.click()
+  }
+
+  async function subirFoto(f: File | undefined) {
+    const t = paraTipo.current
+    if (archivo.current) archivo.current.value = ''
+    if (!f || !t) return
+    setSubiendo(t.id)
+    setError('')
+    try {
+      await guardarFotoTipo(t.id, await achicarFoto(f))
+      setVersionFotos((v) => v + 1)
+      setAviso(`Foto del tipo ${t.descripcion} guardada.`)
+    } catch (e) {
+      manejar(e instanceof Error && e.name === 'InvalidStateError' ? new Error('El archivo no es una foto.') : e)
+    } finally {
+      setSubiendo(null)
+    }
+  }
+
+  async function quitarFoto(t: TipoHabitacion) {
+    if (!window.confirm(`¿Quitar la foto del tipo ${t.descripcion}?`)) return
+    try {
+      await quitarFotoTipo(t.id)
+      setVersionFotos((v) => v + 1)
+      setAviso(`Quitada la foto del tipo ${t.descripcion}.`)
+    } catch (e) {
+      manejar(e)
+    }
+  }
+
   return (
     <section>
       <div className="rack-cabecera">
@@ -45,11 +88,13 @@ export default function Tipos({ alVencer }: { alVencer: () => void }) {
         {puedeEditar && <button type="button" onClick={() => setEditando({ nuevo: true })}>Nuevo tipo</button>}
       </div>
       {aviso && <p className="ok-texto" role="status">{aviso}</p>}
+      {error && <p className="error" role="alert">{error}</p>}
+      <input ref={archivo} type="file" accept="image/*" hidden onChange={(e) => subirFoto(e.target.files?.[0])} />
 
       <div className="tabla-marco">
         <table className="tabla catalogo">
           <thead>
-            <tr><th className="num">No.</th><th>Nombre</th><th>Siglas</th><th className="num">Personas</th><th className="num">Habitaciones</th></tr>
+            <tr><th className="num">No.</th><th>Nombre</th><th>Siglas</th><th className="num">Personas</th><th className="num">Habitaciones</th><th>Foto (ilustrativa)</th></tr>
           </thead>
           <tbody>
             {tipos.map((t) => (
@@ -62,6 +107,17 @@ export default function Tipos({ alVencer }: { alVencer: () => void }) {
                 <td>{t.siglas}</td>
                 <td className="num">{t.minimo === t.maximo ? t.maximo : `${t.minimo} a ${t.maximo}`}</td>
                 <td className="num">{t.habitaciones || <span className="tenue">ninguna</span>}</td>
+                <td className="celda-foto" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                  <FotoTipo tipo={t.id} fotos={fotos} className="foto-tipo mini" />
+                  {puedeEditar && (
+                    <span className="acciones-fila">
+                      <button type="button" className="secundario chico" disabled={subiendo === t.id} onClick={() => elegirFoto(t)}>
+                        {subiendo === t.id ? 'Subiendo...' : fotos.some((f) => f.tipo === t.id) ? 'Cambiar' : 'Poner foto'}
+                      </button>
+                      {fotos.some((f) => f.tipo === t.id) && <button type="button" className="secundario chico" onClick={() => quitarFoto(t)}>Quitar</button>}
+                    </span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

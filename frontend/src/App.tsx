@@ -21,6 +21,7 @@ const FOTOS: Partial<Record<Pagina, { src: string; alt: string; pos: string }>> 
   recepcion: { src: '/seccion-recepcion.jpg', alt: 'El lobby y la recepción del hotel', pos: 'center 55%' },
   walkin: { src: '/seccion-walkin.jpg', alt: 'La piscina del hotel', pos: 'center 60%' },
   cafeteria: { src: '/seccion-cafeteria.jpg', alt: 'La cafetería del hotel', pos: 'center 60%' },
+  inicio: { src: '/seccion-tablero.jpg', alt: 'Una habitación matrimonial del hotel', pos: 'center 55%' },
 }
 
 export default function App() {
