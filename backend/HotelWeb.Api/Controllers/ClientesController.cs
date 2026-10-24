@@ -37,7 +37,7 @@ public sealed class ClientesController : ControllerBase
     public ActionResult<PantallaClientes> Buscar([FromQuery] string? buscar) => Ok(new PantallaClientes(
         _clientes.Buscar(buscar),
         ReglasCliente.Comprobantes.Select(c => new TipoComprobante(c.Key, c.Value, ReglasCliente.PideRnc(c.Key))).ToList(),
-        _permisos.EditaCatalogos(Tokens.IdDe(User))));
+        _permisos.EditaClientes(Tokens.IdDe(User))));
 
     [HttpGet("{numero:long}")]
     public ActionResult<Cliente> Obtener(long numero) =>
@@ -62,7 +62,7 @@ public sealed class ClientesController : ControllerBase
     private ActionResult<ClienteGuardado> Escribir(Func<string, ClienteGuardado> accion)
     {
         var id = Tokens.IdDe(User);
-        if (!_permisos.EditaCatalogos(id)) return StatusCode(403, "Su usuario no puede modificar los clientes.");
+        if (!_permisos.EditaClientes(id)) return StatusCode(403, "Su usuario no puede modificar los clientes.");
         try
         {
             return Ok(accion(User.FindFirst("login")?.Value ?? id.ToString()));

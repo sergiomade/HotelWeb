@@ -1,12 +1,17 @@
 using HotelWeb.Api.Seguridad;
+using HotelWeb.Core.Seguridad;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HotelWeb.Api.Controllers;
 
 public sealed record SolicitudIngreso(string Usuario, string Clave);
-public sealed record UsuarioVista(int Id, string Login, string Nombre, bool Supervisor, bool EditaCatalogos);
+
+/// <summary>Permisos: las claves de PermisosHotel que tiene (las areas que no tiene no salen en el menu).</summary>
+public sealed record UsuarioVista(int Id, string Login, string Nombre, bool Supervisor, bool EditaCatalogos,
+    IReadOnlyList<string> Permisos, bool SeguridadActivada);
 public sealed record Sesion(string Token, DateTime Vence, UsuarioVista Usuario);
+public sealed record SolicitudCambioClave(string Actual, string Nueva);
 
 /// <summary>Ingreso con los usuarios de Delphi.</summary>
 [ApiController]
@@ -14,13 +19,16 @@ public sealed record Sesion(string Token, DateTime Vence, UsuarioVista Usuario);
 public sealed class AuthController : ControllerBase
 {
     private readonly RepositorioUsuarios _usuarios;
+    private readonly RepositorioSeguridad _seguridad;
     private readonly Tokens _tokens;
     private readonly PermisosWeb _permisos;
     private readonly ILogger<AuthController> _log;
 
-    public AuthController(RepositorioUsuarios usuarios, Tokens tokens, PermisosWeb permisos, ILogger<AuthController> log)
+    public AuthController(RepositorioUsuarios usuarios, RepositorioSeguridad seguridad, Tokens tokens, PermisosWeb permisos,
+        ILogger<AuthController> log)
     {
         _usuarios = usuarios;
+        _seguridad = seguridad;
         _tokens = tokens;
         _permisos = permisos;
         _log = log;
@@ -44,5 +52,26 @@ public sealed class AuthController : ControllerBase
     public ActionResult<UsuarioVista> Yo() =>
         _usuarios.Obtener(Tokens.IdDe(User)) is { } u ? Ok(Vista(u)) : Unauthorized("La sesion ya no es valida.");
 
-    private UsuarioVista Vista(Usuario u) => new(u.Id, u.Login, u.Nombre, u.Supervisor, _permisos.EditaCatalogos(u.Id));
+    /// <summary>Cada usuario cambia su clave (la misma de Delphi): debe dar la actual.</summary>
+    [HttpPut("clave")]
+    public IActionResult CambiarClave(SolicitudCambioClave s)
+    {
+        try
+        {
+            if (!_seguridad.CambiarMiClave(Tokens.IdDe(User), s.Actual, s.Nueva)) return BadRequest("La clave actual no es correcta.");
+            _log.LogInformation("{Usuario} cambio su clave", User.FindFirst("login")?.Value);
+            return NoContent();
+        }
+        catch (ErrorSeguridad e)
+        {
+            return BadRequest(e.Message);
+        }
+    }
+
+    private UsuarioVista Vista(Usuario u)
+    {
+        var p = _permisos.De(u.Id);
+        return new(u.Id, u.Login, u.Nombre, u.Supervisor, _permisos.EditaCatalogos(u.Id),
+            PermisosHotel.Todos.Where(x => p.Contains(x.Codigo)).Select(x => x.Clave).ToList(), _permisos.Activada());
+    }
 }

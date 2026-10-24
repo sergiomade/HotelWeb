@@ -38,7 +38,7 @@ public sealed class HabitacionesController : ControllerBase
 
     [HttpGet]
     public ActionResult<PantallaHabitaciones> Obtener() =>
-        Ok(new PantallaHabitaciones(_habitaciones.Obtener(), _permisos.EditaCatalogos(Tokens.IdDe(User))));
+        Ok(new PantallaHabitaciones(_habitaciones.Obtener(), _permisos.EditaHabitaciones(Tokens.IdDe(User))));
 
     [HttpGet("posicion/{numero:int}")]
     public IActionResult Posicion(int numero)
@@ -66,7 +66,7 @@ public sealed class HabitacionesController : ControllerBase
     private ActionResult<Habitacion> Escribir(Func<string, Habitacion> accion)
     {
         var id = Tokens.IdDe(User);
-        if (!_permisos.EditaCatalogos(id)) return StatusCode(403, "Su usuario no puede modificar las habitaciones.");
+        if (!_permisos.EditaHabitaciones(id)) return StatusCode(403, "Su usuario no puede modificar las habitaciones.");
         try
         {
             return Ok(accion(User.FindFirst("login")?.Value ?? id.ToString()));

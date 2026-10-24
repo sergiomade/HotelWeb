@@ -7,14 +7,23 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace HotelWeb.Tests;
 
-/// <summary>Permisos de edicion (Permisos:EditanCatalogos). Sin base: el permiso se revisa antes de tocarla.</summary>
+/// <summary>
+/// Permisos de edicion (Permisos:EditanCatalogos) y de seguridad. El permiso se revisa antes de tocar los datos; con la
+/// seguridad sin activar en la base (modulo 40) valen las listas de appsettings.
+/// </summary>
 public class PermisosTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private const string Clave = "clave-de-las-pruebas-de-permisos-0123456789";
     private readonly WebApplicationFactory<Program> _f;
 
     public PermisosTests(WebApplicationFactory<Program> f) =>
-        _f = f.WithWebHostBuilder(b => b.UseEnvironment("Development").UseSetting("Jwt:Key", Clave));
+        _f = f.WithWebHostBuilder(b => b.UseEnvironment("Development").UseSetting("Jwt:Key", Clave)
+            // una base de seguridad que no existe: las pruebas nunca escriben en la de desarrollo (al ver la
+            // seguridad activada, PermisosWeb sincroniza las opciones) y siempre valen las listas de appsettings
+            .UseSetting("ConnectionStrings:Seguridad", SinBase));
+
+    public const string SinBase =
+        "Server=.;Database=NoExiste_PruebasHotelWeb;Integrated Security=true;TrustServerCertificate=true;Connect Timeout=3";
 
     private HttpClient Cliente(int usuarioId)
     {
@@ -97,6 +106,29 @@ public class PermisosTests : IClassFixture<WebApplicationFactory<Program>>
     }
 
     [Fact]
+    public async Task Ni_administrar_la_seguridad()
+    {
+        var c = Cliente(99);
+        Assert.Equal(HttpStatusCode.Forbidden, (await c.GetAsync("/api/seguridad")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await c.PostAsync("/api/seguridad/activar", null)).StatusCode);
+        var usuario = new { login = "prueba", nombre = "PRUEBA", clave = "clave1", cancelaFactura = false, grupos = new[] { 1 } };
+        Assert.Equal(HttpStatusCode.Forbidden, (await c.PostAsJsonAsync("/api/seguridad/usuarios", usuario)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await c.PostAsJsonAsync("/api/seguridad/usuarios/existente", new { login = "x", grupos = new[] { 1 } })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await c.PutAsJsonAsync("/api/seguridad/usuarios/1", new { nombre = "X", activo = false, cancelaFactura = false, grupos = Array.Empty<int>() })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await c.PutAsJsonAsync("/api/seguridad/usuarios/1/clave", new { clave = "nueva1" })).StatusCode);
+        var grupo = new { descripcion = "PRUEBA", activo = true, permisos = new[] { 4020 } };
+        Assert.Equal(HttpStatusCode.Forbidden, (await c.PostAsJsonAsync("/api/seguridad/grupos", grupo)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await c.PutAsJsonAsync("/api/seguridad/grupos/1", grupo)).StatusCode);
+    }
+
+    [Fact]
+    public async Task Una_clave_nueva_invalida_no_se_guarda()
+    {
+        var r = await Cliente(99).PutAsJsonAsync("/api/auth/clave", new { actual = "x", nueva = "ab" });
+        Assert.Equal(HttpStatusCode.BadRequest, r.StatusCode);
+    }
+
+    [Fact]
     public async Task Sin_sesion_tampoco()
     {
         var r = await _f.CreateClient().PutAsJsonAsync("/api/catalogos/precios/1/A", new { conImpuestos = 3500m, personaAdicional = 0m });
@@ -106,6 +138,7 @@ public class PermisosTests : IClassFixture<WebApplicationFactory<Program>>
     [Theory]
     [InlineData(1, true)]
     [InlineData(4, true)]
+    [InlineData(6, true)]
     [InlineData(2, false)]
     public void La_lista_de_appsettings(int usuario, bool edita)
     {

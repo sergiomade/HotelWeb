@@ -3,13 +3,16 @@ import CobroCafeteria from './CobroCafeteria'
 import Caja from './Caja'
 import Facturas from './Facturas'
 import Fondo from './Fondo'
+import SinOpciones from './SinOpciones'
 import {
-  agregarArticulo, agregarEspecial, articulosCafeteria, borrarLineaMesa, cambiarLineaMesa, cuentaMesa, dinero, mesasCafeteria,
+  pestanasVisibles, agregarArticulo, agregarEspecial, articulosCafeteria, borrarLineaMesa, cambiarLineaMesa, cuentaMesa, dinero, mesasCafeteria,
   moverMesa, preCuentaMesa, SesionVencida,
   type ArticuloCafeteria, type CuentaMesa, type EstadoMesa, type LineaMesa, type MesaCafeteria,
 } from './api'
 
 const CADA = 30_000 // Delphi y otras cajas cambian las mismas mesas
+type VistaCafeteria = 'mesas' | 'facturas' | 'caja'
+const VISTAS: Record<VistaCafeteria, string> = { mesas: 'Mesas', facturas: 'Facturas', caja: 'Caja' }
 const NOMBRE: Record<EstadoMesa, string> = { Libre: 'Libre', Abierta: 'Abierta', PreCuenta: 'Pre-cuenta' }
 
 const hora = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString('es-DO', { hour: 'numeric', minute: '2-digit' }) : '')
@@ -20,13 +23,17 @@ const hora = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString('es
  * Cobro con e-CF o a la habitacion (8b, 8c) y la lista de facturas con sus notas de credito (8d).
  */
 export default function Cafeteria({ alVencer }: { alVencer: () => void }) {
-  const [vista, setVista] = useState<'mesas' | 'facturas' | 'caja'>('mesas')
+  const [elegida, setVista] = useState<VistaCafeteria>('mesas')
+  // solo las pestanas que permite la seguridad
+  const visibles = pestanasVisibles('cafeteria', Object.keys(VISTAS) as VistaCafeteria[])
+  if (visibles.length === 0) return <SinOpciones area="Cafetería" />
+  const vista = visibles.includes(elegida) ? elegida : visibles[0]
   return (
     <>
       <div className="pestanas" role="tablist" aria-label="Cafetería">
-        <button type="button" role="tab" aria-selected={vista === 'mesas'} className={vista === 'mesas' ? 'activo' : ''} onClick={() => setVista('mesas')}>Mesas</button>
-        <button type="button" role="tab" aria-selected={vista === 'facturas'} className={vista === 'facturas' ? 'activo' : ''} onClick={() => setVista('facturas')}>Facturas</button>
-        <button type="button" role="tab" aria-selected={vista === 'caja'} className={vista === 'caja' ? 'activo' : ''} onClick={() => setVista('caja')}>Caja</button>
+        {visibles.map((x) => (
+          <button key={x} type="button" role="tab" aria-selected={vista === x} className={vista === x ? 'activo' : ''} onClick={() => setVista(x)}>{VISTAS[x]}</button>
+        ))}
       </div>
       {vista === 'mesas' ? <Mesas alVencer={alVencer} /> : vista === 'facturas' ? <Facturas alVencer={alVencer} ambito="cafeteria" />
         : <Caja ambito="cafeteria" alVencer={alVencer} />}

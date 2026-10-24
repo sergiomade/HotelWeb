@@ -55,7 +55,7 @@ public sealed class TiposController : ControllerBase
     public IActionResult GuardarFoto(int id, SolicitudFoto s)
     {
         var usuario = Tokens.IdDe(User);
-        if (!_permisos.EditaCatalogos(usuario)) return StatusCode(403, "Su usuario no puede cambiar las fotos de los tipos.");
+        if (!_permisos.EditaTipos(usuario)) return StatusCode(403, "Su usuario no puede cambiar las fotos de los tipos.");
         byte[] bytes;
         try
         {
@@ -82,7 +82,7 @@ public sealed class TiposController : ControllerBase
     public IActionResult QuitarFoto(int id)
     {
         var usuario = Tokens.IdDe(User);
-        if (!_permisos.EditaCatalogos(usuario)) return StatusCode(403, "Su usuario no puede cambiar las fotos de los tipos.");
+        if (!_permisos.EditaTipos(usuario)) return StatusCode(403, "Su usuario no puede cambiar las fotos de los tipos.");
         if (!_fotos.Quitar(id)) return NotFound($"El tipo {id} no tiene foto.");
         _log.LogInformation("{Usuario} quito la foto del tipo {Id}", User.FindFirst("login")?.Value ?? usuario.ToString(), id);
         return NoContent();
@@ -90,7 +90,7 @@ public sealed class TiposController : ControllerBase
 
     [HttpGet]
     public ActionResult<PantallaTipos> Obtener() =>
-        Ok(new PantallaTipos(_tipos.Obtener(), _permisos.EditaCatalogos(Tokens.IdDe(User))));
+        Ok(new PantallaTipos(_tipos.Obtener(), _permisos.EditaTipos(Tokens.IdDe(User))));
 
     [HttpPut("{id:int}")]
     public ActionResult<TipoHabitacion> Modificar(int id, SolicitudTipo s) => Escribir(login =>
@@ -111,7 +111,7 @@ public sealed class TiposController : ControllerBase
     private ActionResult<TipoHabitacion> Escribir(Func<string, TipoHabitacion> accion)
     {
         var id = Tokens.IdDe(User);
-        if (!_permisos.EditaCatalogos(id)) return StatusCode(403, "Su usuario no puede modificar los tipos de habitacion.");
+        if (!_permisos.EditaTipos(id)) return StatusCode(403, "Su usuario no puede modificar los tipos de habitacion.");
         try
         {
             return Ok(accion(User.FindFirst("login")?.Value ?? id.ToString()));

@@ -30,7 +30,7 @@ public sealed class ServiciosController : ControllerBase
 
     [HttpGet]
     public ActionResult<PantallaServicios> Obtener() =>
-        Ok(new PantallaServicios(_servicios.Obtener(), _permisos.EditaCatalogos(Tokens.IdDe(User))));
+        Ok(new PantallaServicios(_servicios.Obtener(), _permisos.EditaServicios(Tokens.IdDe(User))));
 
     [HttpPut("{id:int}")]
     public ActionResult<Servicio> Modificar(int id, SolicitudServicio s) => Escribir(login =>
@@ -51,7 +51,7 @@ public sealed class ServiciosController : ControllerBase
     private ActionResult<Servicio> Escribir(Func<string, Servicio> accion)
     {
         var id = Tokens.IdDe(User);
-        if (!_permisos.EditaCatalogos(id)) return StatusCode(403, "Su usuario no puede modificar los servicios.");
+        if (!_permisos.EditaServicios(id)) return StatusCode(403, "Su usuario no puede modificar los servicios.");
         try
         {
             return Ok(accion(User.FindFirst("login")?.Value ?? id.ToString()));

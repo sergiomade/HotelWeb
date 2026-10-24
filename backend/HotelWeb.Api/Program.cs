@@ -14,6 +14,7 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddSingleton<Conexiones>();
 builder.Services.AddSingleton<RepositorioUsuarios>();
+builder.Services.AddSingleton<RepositorioSeguridad>();
 builder.Services.AddSingleton<HotelWeb.Api.Rack.RepositorioRack>();
 builder.Services.AddSingleton<HotelWeb.Api.Catalogos.RepositorioPrecios>();
 builder.Services.AddSingleton<HotelWeb.Api.Catalogos.RepositorioHabitaciones>();

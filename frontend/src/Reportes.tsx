@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import SinOpciones from './SinOpciones'
 import {
-  buscarReservas, dinero, fecha, hoyIso, obtenerRack, reporteCanceladas, reporteClientes, reporteComprobantes, reporteVentasCafeteria,
+  pestanasVisibles, buscarReservas, dinero, fecha, hoyIso, obtenerRack, reporteCanceladas, reporteClientes, reporteComprobantes, reporteVentasCafeteria,
   reporteVentasHotel, SesionVencida,
   type ClienteReporte, type Comprobante, type FacturaCancelada, type HabitacionRack, type ReporteComprobantes, type ReservaResumen,
   type VentaCafeteria, type VentaHotel,
@@ -31,15 +32,19 @@ const t = (s: string | null | undefined) => s ?? ''
  * las facturas canceladas sin cobro. Cada uno se imprime o se pasa a Excel.
  */
 export default function Reportes({ alVencer }: { alVencer: () => void }) {
-  const [p, setP] = useState<Pestana>('hotel')
+  const [elegida, setP] = useState<Pestana>('hotel')
   const [desde, setDesde] = useState(() => hoyIso(-7))
   const [hasta, setHasta] = useState(() => hoyIso())
+  // solo los reportes que permite la seguridad
+  const visibles = pestanasVisibles('reportes', Object.keys(NOMBRES) as Pestana[])
+  if (visibles.length === 0) return <SinOpciones area="Reportes" />
+  const p = visibles.includes(elegida) ? elegida : visibles[0]
 
   return (
     <section className="catalogos reportes">
       <h2 className="no-imprimir">Reportes</h2>
       <div className="pestanas no-imprimir" role="tablist">
-        {(Object.keys(NOMBRES) as Pestana[]).map((x) => (
+        {visibles.map((x) => (
           <button key={x} type="button" role="tab" aria-selected={p === x} className={p === x ? 'activo' : ''} onClick={() => setP(x)}>{NOMBRES[x]}</button>
         ))}
       </div>

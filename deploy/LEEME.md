@@ -36,7 +36,15 @@ las mismas de `conexiones.ini` de Delphi (seccion del hotel):
 
 `Jwt:Key` ya la genero el instalador: no la cambie (si cambia, todos deben volver a entrar).
 
-`Permisos:EditanCatalogos` es la lista de usuarios (Usuario_Id de Seg_Usuario) que pueden cambiar precios y demas catalogos; los otros solo consultan. Viene con 1 y 4.
+`Permisos:EditanCatalogos` es la lista de usuarios (Usuario_Id de Seg_Usuario) que pueden cambiar precios y demas catalogos; los otros solo consultan. Viene con 1, 4 y 6 (Wilton, Sergio Made y Anabel en hseguridad); al activar la seguridad de la web son los que entran al grupo ADMIN HOTEL.
+
+Despues de activar la seguridad de la web (menu Seguridad, etapa 10) esa lista ya no se usa: los permisos salen de los grupos del hotel en la base Seguridad.
+
+## Seguridad de la web (una vez)
+
+Antes de pulsar "Activar la seguridad" en el menu Seguridad, ejecute en la base Seguridad (con respaldo)
+`sql\seguridad-triggers-raiserror.sql` (viene en el paquete): corrige los triggers antiguos de Delphi (13 en hseguridad) que los SQL Server nuevos no aceptan
+(sin el, no se puede agregar a nadie a un grupo). Se puede repetir sin problema.
 
 Inicie el sitio y revise:
 

@@ -5,6 +5,9 @@ export interface Usuario {
   login: string
   nombre: string
   supervisor: boolean
+  /** claves de los permisos (PermisosHotel): las areas que no estan no salen en el menu */
+  permisos?: string[]
+  seguridadActivada?: boolean
 }
 
 export interface Sesion {
@@ -88,6 +91,97 @@ export async function ingresar(usuario: string, clave: string): Promise<Sesion> 
 export function salir() {
   guardar(null)
 }
+
+/** Los datos y permisos del usuario al dia (un administrador pudo cambiarlos); los guarda en la sesion. */
+export async function refrescarUsuario(): Promise<Sesion | null> {
+  const u = await pedir<Usuario>('/api/auth/yo')
+  const s = sesionGuardada()
+  if (!s) return null
+  const nueva = { ...s, usuario: u }
+  guardar(nueva)
+  return nueva
+}
+
+/** Pedido que no devuelve nada (204). */
+async function enviar(ruta: string, metodo: string, cuerpo?: unknown): Promise<void> {
+  const s = sesionGuardada()
+  const r = await fetch(ruta, {
+    method: metodo,
+    headers: { 'Content-Type': 'application/json', ...(s ? { Authorization: `Bearer ${s.token}` } : {}) },
+    body: cuerpo === undefined ? undefined : JSON.stringify(cuerpo),
+  })
+  if (r.status === 401 && s) {
+    guardar(null)
+    throw new SesionVencida('La sesion vencio: ingrese de nuevo.')
+  }
+  if (!r.ok) throw new Error((await r.text()) || `Error ${r.status}`)
+}
+
+/**
+ * Si la sesion tiene un permiso (clave de PermisosHotel: un area como 'catalogos', una pestana como
+ * 'catalogos.clientes' o una accion). Una sesion guardada de antes, sin la lista, ve todo menos Seguridad.
+ */
+export function puede(clave: string): boolean {
+  const p = sesionGuardada()?.usuario.permisos
+  return p ? p.includes(clave) : clave !== 'seguridad'
+}
+
+/** Las pestanas de un area que el usuario puede ver. */
+export function pestanasVisibles<T extends string>(area: string, todas: T[]): T[] {
+  return todas.filter((x) => puede(`${area}.${x}`))
+}
+
+export const cambiarMiClave = (actual: string, nueva: string) => enviar('/api/auth/clave', 'PUT', { actual, nueva })
+
+// ---- seguridad (etapa 10): usuarios, grupos y permisos del hotel en las tablas de Delphi ----
+
+export interface PermisoHotel {
+  codigo: number
+  clave: string
+  nombre: string
+  tipo: 'Area' | 'Opcion' | 'Accion'
+  ayuda: string
+  /** clave del area a la que pertenece (null en las areas y en las acciones generales) */
+  area: string | null
+}
+
+export interface GrupoSeguridad {
+  id: number
+  descripcion: string
+  activo: boolean
+  permisos: number[]
+  miembros: number
+}
+
+export interface UsuarioSeguridad {
+  id: number
+  login: string
+  nombre: string
+  activo: boolean
+  cancelaFactura: boolean
+  grupos: number[]
+}
+
+export interface PantallaSeguridad {
+  activada: boolean
+  permisos: PermisoHotel[]
+  grupos: GrupoSeguridad[]
+  usuarios: UsuarioSeguridad[]
+}
+
+export const obtenerSeguridad = () => pedir<PantallaSeguridad>('/api/seguridad')
+export const activarSeguridad = () => enviar('/api/seguridad/activar', 'POST')
+export const crearUsuario = (d: { login: string; nombre: string; clave: string; cancelaFactura: boolean; grupos: number[] }) =>
+  enviar('/api/seguridad/usuarios', 'POST', d)
+export const agregarUsuarioExistente = (login: string, grupos: number[]) =>
+  enviar('/api/seguridad/usuarios/existente', 'POST', { login, grupos })
+export const modificarUsuario = (id: number, d: { nombre: string; activo: boolean; cancelaFactura: boolean; grupos: number[] }) =>
+  enviar(`/api/seguridad/usuarios/${id}`, 'PUT', d)
+export const ponerClave = (id: number, clave: string) => enviar(`/api/seguridad/usuarios/${id}/clave`, 'PUT', { clave })
+export const crearGrupo = (d: { descripcion: string; activo: boolean; permisos: number[] }) =>
+  enviar('/api/seguridad/grupos', 'POST', d)
+export const modificarGrupo = (id: number, d: { descripcion: string; activo: boolean; permisos: number[] }) =>
+  enviar(`/api/seguridad/grupos/${id}`, 'PUT', d)
 
 export const obtenerDiagnostico = () => pedir<Diagnostico>('/api/diagnostico')
 

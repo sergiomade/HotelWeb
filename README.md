@@ -12,7 +12,10 @@ Delphi y conviven mientras tanto. Plan y reglas del negocio: [docs/PLAN.md](docs
 ## Desarrollo
 
 ```powershell
-# API (puerto 5081), contra Hotel_new y Seguridad locales (appsettings.Development.json)
+# API contra HotelPruebas (nube; la conexion sale de C:\Contabilidad\exe\conexiones.ini) y hSeguridad local
+cd backend ; .\hotelpruebas.ps1            # -SeguridadNube: usuarios reales de la nube
+
+# o contra Hotel_new y hSeguridad locales (appsettings.Development.json)
 cd backend\HotelWeb.Api ; dotnet run --launch-profile http
 
 # pagina (puerto 5173; /api va a la API)

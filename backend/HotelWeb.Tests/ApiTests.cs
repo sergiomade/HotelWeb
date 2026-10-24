@@ -11,7 +11,8 @@ public class ApiTests : IClassFixture<WebApplicationFactory<Program>>
     private readonly HttpClient _http;
 
     public ApiTests(WebApplicationFactory<Program> f) =>
-        _http = f.WithWebHostBuilder(b => b.UseEnvironment("Development")).CreateClient();
+        _http = f.WithWebHostBuilder(b => b.UseEnvironment("Development")
+            .UseSetting("ConnectionStrings:Seguridad", PermisosTests.SinBase)).CreateClient();
 
     [Fact]
     public async Task El_ping_no_pide_sesion()

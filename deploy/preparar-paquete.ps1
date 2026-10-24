@@ -43,6 +43,8 @@ Get-ChildItem $app -Filter 'appsettings.*.json' | Remove-Item -Force
 
 # 3) Instalador
 foreach ($a in 'instalar-iis.ps1', 'LEEME.md') { Copy-Item (Join-Path $PSScriptRoot $a) $Salida }
+# scripts SQL que se ejecutan una vez a mano (ver LEEME.md)
+Copy-Item (Join-Path $PSScriptRoot 'sql') (Join-Path $Salida 'sql') -Recurse -Force
 
 # 4) Verificaciones
 if (-not (Test-Path (Join-Path $app 'wwwroot\index.html'))) { throw 'El paquete no trae la pagina web (wwwroot\index.html).' }

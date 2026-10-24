@@ -32,13 +32,13 @@ public sealed class PreciosController : ControllerBase
     /// <summary>La tabla completa y si el usuario de la sesion puede editarla.</summary>
     [HttpGet]
     public ActionResult<PantallaPrecios> Obtener() =>
-        Ok(new PantallaPrecios(_precios.Obtener(), _permisos.EditaCatalogos(Tokens.IdDe(User))));
+        Ok(new PantallaPrecios(_precios.Obtener(), _permisos.EditaPrecios(Tokens.IdDe(User))));
 
     [HttpPut("{tipo:int}/{categoria}")]
     public ActionResult<Precio> Guardar(int tipo, string categoria, SolicitudPrecio s)
     {
         var id = Tokens.IdDe(User);
-        if (!_permisos.EditaCatalogos(id)) return StatusCode(403, "Su usuario no puede modificar los precios.");
+        if (!_permisos.EditaPrecios(id)) return StatusCode(403, "Su usuario no puede modificar los precios.");
 
         decimal sinImpuestos;
         if (s.ConImpuestos is { } final) sinImpuestos = PrecioHabitacion.DesdeFinal(final);

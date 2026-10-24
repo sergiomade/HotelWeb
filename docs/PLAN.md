@@ -405,3 +405,52 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
     las achica a 1280 px); se ven en el check-in, el editor de reservas, la confirmacion impresa y la cuenta. La foto se
     sirve sin sesion (la etiqueta img no manda el token). En HotelPruebas quedaron fotos ilustrativas (no exactas) de
     C:\NewProyectHotel\Images en los tipos 1-7; BOOKING, CREDITO, WARTSILA y los "0" sin foto.
+    PENDIENTE (pedido del usuario 2026-10-23): al pasar el raton por encima de la foto pequena (check-in, reservas,
+    Catalogos > Tipos, cuenta) que se agrande para verla mejor (CSS en .foto-tipo.mini / .cabeza; no en lo impreso).
+
+## Etapa 10 (seguridad: usuarios, grupos y permisos): decisiones del usuario (2026-10-24)
+
+- Estudio del modulo Seguridad de Delphi (copia en `Seguridad/`): tablas Seg_Usuario, Seg_Grupo, Seg_Grupo_Usuario,
+  Seg_Modulos, Seg_Opcion (acciones 1-6 = Anadir, Modificar, Eliminar, Buscar, Imprimir, Navegar), Seg_Permiso_Grupo y
+  Seg_Log_Actividad (vacia). La base la comparten contabilidad, tesoreria, etc. (modulos 1-30); el hotel no tenia modulo.
+  No se copia: la vista de claves en claro, el SQL armado con texto, el MAX+1 sin bloqueo ni el borrado de usuarios.
+- Decisiones: (1) se escribe en la base Seguridad, solo AGREGANDO el modulo 40 "HOTEL WEB" (cambia la decision de la
+  etapa 0 de no tocarla); (2) solo se ven y cambian los usuarios que estan en grupos del hotel; (3) las areas del menu
+  se ocultan segun los permisos.
+- HECHA (2026-10-24), probada contra una copia de Seguridad (borrada despues). Falta prueba del usuario. 270 pruebas.
+  - Permisos fijos en `HotelWeb.Core/Seguridad/PermisosHotel.cs` = filas de Seg_Opcion del modulo 40: 4000 marca de
+    grupo del hotel (como la opcion 0 "MENU PRINCIPAL" de Delphi), 4001-4008 areas (Hospedaje, Reservas, Recepcion,
+    Walk-in, Cafeteria, Compras, Reportes, Catalogos), 4010-4014 las acciones que estaban en appsettings, 4020
+    Administrar seguridad. Un grupo tiene el permiso si hay fila en Seg_Permiso_Grupo (Permiso_Codigo '6', visible 1).
+  - `PermisosWeb`: sin modulo 40, todo como antes (areas para todos, acciones por las listas de appsettings; los de
+    EditanCatalogos administran). Con modulo 40, lo dicen los grupos activos del usuario (se guarda 30 s).
+  - Menu Seguridad (`SeguridadController`, `RepositorioSeguridad`, `Seguridad.tsx`): "Activar la seguridad" crea el
+    modulo, sus opciones y los grupos ADMIN HOTEL (todos los permisos; quien activa + EditanCatalogos) y RECEPCION
+    (Hospedaje, Reservas, Recepcion, Walk-in, Cafeteria; con los activos del grupo HOTEL de Delphi, decision 2026-10-24). Usuarios: nuevo (Supervisor 0 y sin los modulos de
+    otros programas; el Delphi del hotel solo mira Estado), agregar uno existente por su login exacto, nombre, activo,
+    grupos del hotel, "autoriza notas de credito" (Seg_Usuario.CancelaFactura) y clave nueva. Grupos: nombre, activo y
+    permisos. Nunca se borra; no puede desactivarse a si mismo ni quedar sin un administrador activo.
+  - "Mi clave" en la barra: cada usuario cambia su clave (la misma de Delphi). Claves de 4 a 10, sin acentos ni n.
+  - Los triggers ERwin de Seg_Grupo, Seg_Grupo_Usuario, Seg_Modulos y Seg_Log_Actividad usan `raiserror @errno
+    @errmsg`, que SQL Server 2012+ no acepta: en este servidor (2025) cualquier alta en Seg_Grupo_Usuario falla (tambien
+    desde Delphi). `deploy/sql/seguridad-triggers-raiserror.sql` cambia solo esa linea; activar lo exige primero.
+    Aplicado por el usuario en la base Seguridad local el 2026-10-24 (8 triggers corregidos).
+  - 2026-10-24: la base Seguridad local era de MAPLASA. En desarrollo se usa ahora hSeguridad (la real del hotel,
+    bajada de la nube): 19 usuarios (14 activos), grupos ADMINISTRADORES, FINANZAS, CAFETERIA (24) y HOTEL (32), y 13
+    triggers antiguos (el mismo script los corrige). No tiene Seg_Usuario.Id_Personal: el alta solo llena las columnas
+    que existen. Alli el usuario 1 es Wilton (no Yudelka). Decision del usuario (2026-10-24): administran 1 Wilton,
+    4 Sergio Made y 6 Anabel (Permisos:EditanCatalogos = [1, 4, 6]; son los que entran a ADMIN HOTEL al activar).
+  - Para despues: que la API tambien rechace las areas sin permiso (hoy solo se ocultan; las acciones delicadas y la
+    seguridad si se revisan en la API), bitacora en Seg_Log_Actividad, bloqueo tras intentos fallidos.
+  - 2026-10-24, pedido del usuario (un recepcionista que pueda crear clientes sin tocar el resto de los catalogos):
+    permisos en tres niveles. Area (el menu), Opcion = cada pestana del area (4101-4146, clave "area.pestana"; se ve
+    si tiene el area Y la opcion) y Accion. "Editar catalogos" (4010) se partio en 4151-4155 (habitaciones, tipos y
+    fotos, precios, servicios, clientes), cada una revisada en su controlador. Al arrancar con la seguridad activada,
+    PermisosWeb llama RepositorioSeguridad.Sincronizar: crea las opciones nuevas en Seg_Opcion y se las da a los grupos
+    que tenian su "Hereda" (pestanas: el area; catalogos: la 4010, que luego se quita), asi nadie pierde ni gana nada.
+    Editor de grupos por area (area, sus pestanas y sus acciones). Probado en una copia: migracion y un grupo
+    "CLIENTES RECEPCION" (Catalogos + pestana Clientes + crear clientes: precios y habitaciones dan 403).
+    Las pruebas de la API usan una base de seguridad que no existe (antes escribian en la de desarrollo).
+  - 2026-10-24: backend\hotelpruebas.ps1 arranca la API contra HotelPruebas (nube) leyendo la conexion de
+    conexiones.ini al arrancar (la clave no queda en el proyecto); seguridad = hSeguridad local, o -SeguridadNube para
+    db_aa9d01_hseguridad (usuarios reales). appsettings.Development.json queda con Hotel_new de respaldo.
