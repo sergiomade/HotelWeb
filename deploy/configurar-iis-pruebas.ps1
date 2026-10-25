@@ -7,7 +7,7 @@
   Despues de instalar-iis.ps1. Como administrador:
     1. Escribe ConnectionStrings:Hotel y ConnectionStrings:Seguridad en C:\inetpub\hotelweb\appsettings.json con las
        conexiones que lee de C:\Contabilidad\exe\conexiones.ini (la clave queda solo en ese appsettings del servidor,
-       nunca en el proyecto).
+       nunca en el proyecto). Ecf:Ambiente = 1 (testecf), porque HotelPruebas envia al ambiente de pruebas.
     2. Inicia el sitio y prueba /api/diagnostico/ping.
   Se puede repetir.
 
@@ -22,6 +22,7 @@ param(
     [string]$Ini = 'C:\Contabilidad\exe\conexiones.ini',
     [string]$BaseHotel = 'db_aa9d01_hotelpruebas',
     [string]$BaseSeguridad = 'db_aa9d01_hseguridad',
+    [int]$Ambiente = 1,   # Ecf:Ambiente: 1 = testecf (HotelPruebas), 2 = certecf, 3 = produccion
     [switch]$SeguridadNube   # ya es siempre asi; se deja para no romper la costumbre
 )
 
@@ -46,6 +47,9 @@ $textoSeguridad = "$BaseSeguridad en la nube"
 $j = Get-Content $config -Raw | ConvertFrom-Json
 $j.ConnectionStrings.Hotel = $hotel
 $j.ConnectionStrings.Seguridad = $seguridad
+# HotelPruebas envia a testecf: el QR de las facturas debe apuntar al ambiente de pruebas de la DGII (1)
+if ($j.PSObject.Properties.Name -notcontains 'Ecf') { $j | Add-Member -NotePropertyName Ecf -NotePropertyValue ([pscustomobject]@{}) }
+$j.Ecf | Add-Member -NotePropertyName Ambiente -NotePropertyValue $Ambiente -Force
 [IO.File]::WriteAllText($config, ($j | ConvertTo-Json -Depth 10), (New-Object Text.UTF8Encoding $false))
 Write-Host "Conexiones escritas en $config (hotel: $BaseHotel en la nube; seguridad: $textoSeguridad)."
 

@@ -7,6 +7,7 @@
     app\              API publicada (Release) con la pagina web compilada en wwwroot. Su appsettings.json es la
                       PLANTILLA del repositorio (sin claves); el de desarrollo no se copia.
     instalar-iis.ps1  Instalador para IIS (en el servidor, como administrador)
+    configurar-iis-pruebas.ps1  Conexiones a la nube (HotelPruebas y la seguridad del hotel) desde conexiones.ini
     LEEME.md
 
 .EXAMPLE
@@ -42,7 +43,7 @@ if ($LASTEXITCODE -ne 0) { throw 'dotnet publish fallo.' }
 Get-ChildItem $app -Filter 'appsettings.*.json' | Remove-Item -Force
 
 # 3) Instalador
-foreach ($a in 'instalar-iis.ps1', 'LEEME.md') { Copy-Item (Join-Path $PSScriptRoot $a) $Salida }
+foreach ($a in 'instalar-iis.ps1', 'configurar-iis-pruebas.ps1', 'LEEME.md') { Copy-Item (Join-Path $PSScriptRoot $a) $Salida }
 # scripts SQL que se ejecutan una vez a mano (ver LEEME.md)
 Copy-Item (Join-Path $PSScriptRoot 'sql') (Join-Path $Salida 'sql') -Recurse -Force
 
