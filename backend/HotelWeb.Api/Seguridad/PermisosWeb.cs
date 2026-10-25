@@ -105,7 +105,11 @@ public sealed class PermisosWeb
         if (_anulanAdelantos.Contains(usuarioId)) p.Add(PermisosHotel.AnularAdelantos.Codigo);
         if (_anulanCargos.Contains(usuarioId)) p.Add(PermisosHotel.AnularCargos.Codigo);
         if (_anulanRecibos.Contains(usuarioId)) p.Add(PermisosHotel.AnularRecibos.Codigo);
-        if (_comprobantesEspeciales.Contains(usuarioId)) p.Add(PermisosHotel.ComprobantesEspeciales.Codigo);
+        if (_comprobantesEspeciales.Contains(usuarioId))
+        {
+            p.Add(PermisosHotel.ComprobantesEspeciales.Codigo);
+            p.Add(PermisosHotel.CambiarSecuencias.Codigo);
+        }
         return p;
     }
 
@@ -113,10 +117,13 @@ public sealed class PermisosWeb
     public IReadOnlyCollection<int> AdministradoresIniciales => _editanCatalogos;
 
     /// <summary>
-    /// Gastos menores (E43), compras a informales (E41) y las secuencias e-CF autorizadas. Delphi pedia usuario y clave
-    /// otra vez; decision del usuario (2026-10-23): solo los que tienen el permiso.
+    /// Gastos menores (E43) y compras a informales (E41). Delphi pedia usuario y clave otra vez; decision del usuario
+    /// (2026-10-23): solo los que tienen el permiso.
     /// </summary>
     public bool ComprobantesEspeciales(int usuarioId) => Tiene(usuarioId, PermisosHotel.ComprobantesEspeciales);
+
+    /// <summary>Cambiar las secuencias e-CF autorizadas (antes iba con los comprobantes especiales).</summary>
+    public bool CambiaSecuencias(int usuarioId) => Tiene(usuarioId, PermisosHotel.CambiarSecuencias);
 
     /// <summary>Anular un recibo de pago antes del cuadre.</summary>
     public bool AnulaRecibos(int usuarioId) => Tiene(usuarioId, PermisosHotel.AnularRecibos);

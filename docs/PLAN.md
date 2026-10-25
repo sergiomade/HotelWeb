@@ -457,3 +457,16 @@ Estimado a 2-3 h diarias: etapas 0-1 unas 2 semanas; 2-5 de 2 a 3 meses; 6-9 otr
   - 2026-10-24: backend\hotelpruebas.ps1 arranca la API contra HotelPruebas (nube) leyendo la conexion de
     conexiones.ini al arrancar (la clave no queda en el proyecto); seguridad = hSeguridad local, o -SeguridadNube para
     db_aa9d01_hseguridad (usuarios reales). appsettings.Development.json queda con Hotel_new de respaldo.
+  - 2026-10-25: appsettings.Development.json ya no lleva Hotel (nada de Hotel_new): la conexion de HotelPruebas va en
+    los user secrets (README.md). Aplicado por el usuario seguridad-triggers-raiserror.sql en db_aa9d01_hseguridad
+    (nube, real del hotel), con respaldo previo: 13 triggers corregidos (Seg_Opcion, Seg_Grupo, Seg_Grupo_Usuario,
+    Seg_Log_Actividad, Seg_Modulos, Seg_Permiso_Grupo), QuedanSinCorregir = 0. Siguiente: activar la seguridad de la
+    web en la nube (hotelpruebas.ps1 -SeguridadNube) y ajustar configurar-iis-pruebas.ps1 para la seguridad en la nube.
+  - 2026-10-25: seguridad ACTIVADA por el usuario en db_aa9d01_hseguridad (nube, sql5088), desde el IIS local
+    (configurar-iis-pruebas.ps1 -SeguridadNube, que se agrego ese dia). Decision del usuario (2026-10-25): las bases
+    LOCALES (Hotel_new, hSeguridad) no se usan mas: hotelpruebas.ps1, configurar-iis-pruebas.ps1 y los user secrets
+    van siempre a la nube (-SeguridadNube queda sin efecto). Grupos decididos: ADMIN HOTEL (Wilton, Sergio, Anabel), SUPERVISORES (la operacion + Reportes,
+    anular cargos/recibos/adelantos, cerrar caja, clientes; sin Compras, precios ni comprobantes), CONTABILIDAD (equipo
+    de Anabel: Compras, Reportes, emitir E41/E43) y RECEPCION. Para eso la 4014 quedo en "Emitir E41 y E43" (area
+    Compras) y las secuencias pasaron a la 4015 "Cambiar las secuencias e-CF" (area Catalogos, hereda la 4014).
+    277 pruebas.

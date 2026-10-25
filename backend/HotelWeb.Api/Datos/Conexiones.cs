@@ -14,7 +14,7 @@ public sealed class Conexiones
     public Conexiones(IConfiguration config)
     {
         _hotel = config.GetConnectionString("Hotel")
-                 ?? throw new InvalidOperationException("Falta ConnectionStrings:Hotel en appsettings.json.");
+                 ?? throw new InvalidOperationException("Falta ConnectionStrings:Hotel. En desarrollo: dotnet user-secrets set \"ConnectionStrings:Hotel\" \"...\" (ver README.md); en IIS: appsettings.json del sitio.");
         _seguridad = config.GetConnectionString("Seguridad")
                      ?? throw new InvalidOperationException("Falta ConnectionStrings:Seguridad en appsettings.json.");
     }

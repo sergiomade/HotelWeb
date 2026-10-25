@@ -7,7 +7,7 @@ namespace HotelWeb.Api.Controllers;
 
 public sealed record SolicitudSecuencia(string? Autorizacion, DateTime? FechaAutorizacion, long Desde, long Hasta, DateTime? Vence);
 
-/// <summary>Secuencias e-NCF autorizadas por la DGII (etapa 9d). Ver: todos; cambiar: Permisos:ComprobantesEspeciales.</summary>
+/// <summary>Secuencias e-NCF autorizadas por la DGII (etapa 9d). Ver: todos; cambiar: el permiso 4015 (Cambiar las secuencias e-CF).</summary>
 [ApiController]
 [Route("api/secuencias")]
 public sealed class SecuenciasController : ControllerBase
@@ -29,7 +29,7 @@ public sealed class SecuenciasController : ControllerBase
     public ActionResult<PantallaSecuencias> Estado()
     {
         var (restantes, dias) = _secuencias.Umbrales();
-        return Ok(new PantallaSecuencias(_secuencias.Estado(), _permisos.ComprobantesEspeciales(Tokens.IdDe(User)), restantes, dias));
+        return Ok(new PantallaSecuencias(_secuencias.Estado(), _permisos.CambiaSecuencias(Tokens.IdDe(User)), restantes, dias));
     }
 
     /// <summary>Los tipos que se usan y estan por agotarse, por vencer, agotados, vencidos o sin autorizacion.</summary>
@@ -39,7 +39,7 @@ public sealed class SecuenciasController : ControllerBase
     [HttpPut("{codigo}")]
     public ActionResult<string> Guardar(string codigo, SolicitudSecuencia s)
     {
-        if (!_permisos.ComprobantesEspeciales(Tokens.IdDe(User))) return StatusCode(403, "No tiene permiso para cambiar las secuencias e-CF.");
+        if (!_permisos.CambiaSecuencias(Tokens.IdDe(User))) return StatusCode(403, "No tiene permiso para cambiar las secuencias e-CF.");
         try
         {
             var m = _secuencias.Guardar(codigo, s.Autorizacion, s.FechaAutorizacion, s.Desde, s.Hasta, s.Vence);

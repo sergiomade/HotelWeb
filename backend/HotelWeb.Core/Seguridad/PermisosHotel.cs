@@ -56,7 +56,10 @@ public static class PermisosHotel
     // en una base ya activada la reciben los grupos que veian la pestana Caja (antes, ver la caja era poder cerrarla).
     public static readonly PermisoHotel CerrarCajaHotel = new(4161, "cerrarCajaHotel", "Cerrar el turno de caja", TipoPermiso.Accion, "Cierre de caja del hotel (recibos y adelantos)", "recepcion", 4104);
     public static readonly PermisoHotel CerrarCajaCafeteria = new(4162, "cerrarCajaCafeteria", "Cerrar el turno de caja", TipoPermiso.Accion, "Cierre de caja de la cafetería", "cafeteria", 4113);
-    public static readonly PermisoHotel ComprobantesEspeciales = new(4014, "comprobantesEspeciales", "Comprobantes especiales", TipoPermiso.Accion, "Emitir gastos menores (E43) y compras a informales (E41), y cambiar las secuencias e-CF");
+    public static readonly PermisoHotel ComprobantesEspeciales = new(4014, "comprobantesEspeciales", "Emitir E41 y E43", TipoPermiso.Accion, "Emitir gastos menores (E43) y compras a informales (E41)", "compras");
+    // antes iba dentro de la 4014; al aparecer la reciben los grupos que ya la tenian (decision del usuario 2026-10-25:
+    // el equipo de contabilidad emite E41/E43 sin tocar las secuencias)
+    public static readonly PermisoHotel CambiarSecuencias = new(4015, "cambiarSecuencias", "Cambiar las secuencias e-CF", TipoPermiso.Accion, "Las secuencias e-NCF autorizadas por la DGII", "catalogos", 4014);
     public static readonly PermisoHotel AdministrarSeguridad = new(4020, "seguridad", "Administrar seguridad", TipoPermiso.Accion, "Usuarios, grupos y permisos de la web (el menú Seguridad)");
 
     /// <summary>Las pestanas de las areas: clave = "area.pestana", la misma que usa la pagina.</summary>
@@ -93,7 +96,7 @@ public static class PermisosHotel
 
     public static readonly IReadOnlyList<PermisoHotel> Todos = Areas
         .Concat(Opciones)
-        .Concat(new[] { AnularCargos, AnularRecibos, AnularAdelantos, CerrarCajaHotel, CerrarCajaCafeteria, EditarHabitaciones, EditarTipos, EditarPrecios, EditarServicios, EditarClientes, ComprobantesEspeciales, AdministrarSeguridad })
+        .Concat(new[] { AnularCargos, AnularRecibos, AnularAdelantos, CerrarCajaHotel, CerrarCajaCafeteria, EditarHabitaciones, EditarTipos, EditarPrecios, EditarServicios, EditarClientes, ComprobantesEspeciales, CambiarSecuencias, AdministrarSeguridad })
         .ToList();
 
     /// <summary>Lo que todos podian hacer antes de la seguridad por grupos (sin activar, siguen pudiendo).</summary>

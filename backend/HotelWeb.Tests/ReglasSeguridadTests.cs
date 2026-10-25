@@ -16,6 +16,15 @@ public class ReglasSeguridadTests
     }
 
     [Fact]
+    public void Cambiar_secuencias_se_separo_de_los_comprobantes_especiales_y_lo_hereda()
+    {
+        Assert.Equal(4015, PermisosHotel.CambiarSecuencias.Codigo);
+        Assert.Equal(PermisosHotel.ComprobantesEspeciales.Codigo, PermisosHotel.CambiarSecuencias.Hereda);
+        Assert.Contains(PermisosHotel.CambiarSecuencias, PermisosHotel.Todos);
+        Assert.Equal(PermisosHotel.CambiarSecuencias, PermisosHotel.PorCodigo(4015));
+    }
+
+    [Fact]
     public void Cada_pestana_es_de_un_area_y_la_hereda()
     {
         var areas = PermisosHotel.Areas.ToDictionary(a => a.Clave);

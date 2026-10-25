@@ -56,6 +56,12 @@ Start-WebAppPool HotelWeb ; Start-Website HotelWeb
 - `http://SERVIDOR:8098` desde otra PC: entrar con un usuario y clave de Delphi; la pantalla inicial dice si
   conecta a las dos bases.
 
+## IIS de pruebas en la maquina de desarrollo
+
+`deploy\configurar-iis-pruebas.ps1` (como administrador, despues de `instalar-iis.ps1`) deja el sitio con todo
+en la nube: HotelPruebas y `db_aa9d01_hseguridad` (los usuarios reales del hotel). Las conexiones salen de
+`C:\Contabilidad\exe\conexiones.ini`. Lo inicia y lo prueba.
+
 ## Actualizar
 
 Mismo procedimiento: `preparar-paquete.ps1` y luego `instalar-iis.ps1` en el servidor. No toca `appsettings.json`.
